@@ -11,6 +11,7 @@ import {
 import { ExclamationCircleIcon } from '@patternfly/react-icons';
 import { getDisplayNameFromK8sResource } from '@odh-dashboard/k8s-core';
 import { ProjectDetailsContext } from '#~/pages/projects/ProjectDetailsContext';
+import { WorkbenchPathsContext } from '#~/pages/ceamls/WorkbenchPathsContext';
 import { NotebookState } from '#~/pages/projects/notebook/types';
 import SpawnerPage from './SpawnerPage';
 
@@ -19,6 +20,7 @@ const EditSpawnerPage: React.FC = () => {
     currentProject,
     notebooks: { data, loaded, error },
   } = React.useContext(ProjectDetailsContext);
+  const workbenchPaths = React.useContext(WorkbenchPathsContext);
   const { notebookName } = useParams();
   const ref = React.useRef<NotebookState>();
   if (!ref.current) {
@@ -39,7 +41,7 @@ const EditSpawnerPage: React.FC = () => {
           <EmptyStateFooter>
             <Button
               variant="primary"
-              component={(props: React.ComponentProps<'a'>) => <Link {...props} to="/projects" />}
+              component={(props: React.ComponentProps<'a'>) => <Link {...props} to={workbenchPaths.root} />}
             >
               View my projects
             </Button>
@@ -75,7 +77,7 @@ const EditSpawnerPage: React.FC = () => {
               data-testid="return-to-project-button"
               variant="primary"
               component={(props: React.ComponentProps<'a'>) => (
-                <Link {...props} to={`/projects/${currentProject.metadata.name}`} />
+                <Link {...props} to={workbenchPaths.project(currentProject.metadata.name)} />
               )}
             >
               Return to {getDisplayNameFromK8sResource(currentProject)}

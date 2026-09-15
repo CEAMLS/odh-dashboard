@@ -22,7 +22,7 @@ import {
 } from '#~/pages/projects/types';
 import { useUser } from '#~/redux/selectors';
 import { ProjectDetailsContext } from '#~/pages/projects/ProjectDetailsContext';
-import { ProjectSectionID } from '#~/pages/projects/screens/detail/types';
+import { WorkbenchPathsContext } from '#~/pages/ceamls/WorkbenchPathsContext';
 import { Connection } from '#~/concepts/connectionTypes/types';
 import { fireFormTrackingEvent } from '#~/concepts/analyticsTracking/segmentIOUtils';
 import { NotebookKind } from '#~/k8sTypes';
@@ -75,6 +75,7 @@ const SpawnerFooter: React.FC<SpawnerFooterProps> = ({
     connections: { refresh: refreshConnections },
     kueueStatusByNotebookName,
   } = React.useContext(ProjectDetailsContext);
+  const workbenchPaths = React.useContext(WorkbenchPathsContext);
   const { notebookName } = useParams();
   const notebookState = notebooks.find(
     (currentNotebookState) => currentNotebookState.notebook.metadata.name === notebookName,
@@ -117,7 +118,7 @@ const SpawnerFooter: React.FC<SpawnerFooterProps> = ({
       startNotebookData.image.imageStream?.metadata.namespace === projectName);
 
   const { username } = useUser();
-  const workbenchesHref = `/projects/${projectName}?section=${ProjectSectionID.WORKBENCHES}`;
+  const workbenchesHref = workbenchPaths.list(projectName);
 
   const afterStart = (name: string, type: 'created' | 'updated') => {
     const {

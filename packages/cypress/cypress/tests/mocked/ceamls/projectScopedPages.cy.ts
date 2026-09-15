@@ -7,14 +7,16 @@ import {
   mockStorageClassList,
 } from '#~/__mocks__';
 import { mockClusterSettings } from '#~/__mocks__/mockClusterSettings';
+import { mockImageStreamK8sResource } from '#~/__mocks__/mockImageStreamK8sResource';
 import { mockPodK8sResource } from '#~/__mocks__/mockPodK8sResource';
 import { mockPrometheusQueryResponse } from '#~/__mocks__/mockPrometheusQueryResponse';
 import { mockPVCK8sResource } from '#~/__mocks__/mockPVCK8sResource';
 import { appChrome } from '#~/__tests__/cypress/cypress/pages/appChrome';
 import { clusterStorage } from '#~/__tests__/cypress/cypress/pages/clusterStorage';
-import { workbenchPage } from '#~/__tests__/cypress/cypress/pages/workbench';
+import { createSpawnerPage, workbenchPage } from '#~/__tests__/cypress/cypress/pages/workbench';
 import { verifyRelativeURL } from '#~/__tests__/cypress/cypress/utils/url';
 import {
+  ImageStreamModel,
   NotebookModel,
   PVCModel,
   PodModel,
@@ -50,6 +52,10 @@ const initIntercepts = ({
   cy.interceptK8sList(PodModel, mockK8sResourceList([mockPodK8sResource({})]));
   cy.interceptK8sList(StorageClassModel, mockStorageClassList());
   cy.interceptK8sList(
+    ImageStreamModel,
+    mockK8sResourceList([mockImageStreamK8sResource({ namespace: 'opendatahub' })]),
+  );
+  cy.interceptK8sList(
     { model: NotebookModel, ns: 'test-project' },
     mockK8sResourceList([
       mockNotebookK8sResource({ name: 'ceamls-notebook', displayName: 'CEAMLS Notebook' }),
@@ -66,6 +72,8 @@ const visitPage = (path: string) => {
   cy.findByTestId('app-page-title');
   cy.testA11y();
 };
+
+const findBreadcrumb = () => cy.findByRole('navigation', { name: 'Breadcrumb' });
 
 describe('CEAMLS project-scoped pages', () => {
   it('orders Workbenches, Storage and Projects in the sidebar', () => {
@@ -110,6 +118,38 @@ describe('CEAMLS project-scoped pages', () => {
     visitPage('/workbenches');
 
     cy.findByTestId('empty-state-title').should('contain.text', 'No projects');
+  });
+
+  it('creates a workbench without leaving Workbenches', () => {
+    initIntercepts({});
+    visitPage('/workbenches/test-project');
+
+    workbenchPage.findCreateButton().click();
+    verifyRelativeURL('/workbenches/test-project/spawner');
+    createSpawnerPage.shouldHaveAppTitle();
+    appChrome.findNavItem('Workbenches').should('have.attr', 'aria-current', 'page');
+    findBreadcrumb().findByRole('link', { name: 'Workbenches' }).click();
+    verifyRelativeURL('/workbenches/test-project');
+
+    workbenchPage.findCreateButton().click();
+    createSpawnerPage.findCancelButton().click();
+    verifyRelativeURL('/workbenches/test-project');
+  });
+
+  it('edits a workbench without leaving Workbenches', () => {
+    initIntercepts({});
+    visitPage('/workbenches/test-project');
+
+    workbenchPage.getNotebookRow('CEAMLS Notebook').findKebabAction('Edit workbench').click();
+    verifyRelativeURL('/workbenches/test-project/spawner/ceamls-notebook');
+    cy.findByTestId('app-page-title').should('have.text', 'Edit CEAMLS Notebook');
+    appChrome.findNavItem('Workbenches').should('have.attr', 'aria-current', 'page');
+    findBreadcrumb()
+      .findByRole('link', { name: 'Test Project' })
+      .should('have.attr', 'href', '/workbenches/test-project');
+
+    createSpawnerPage.findCancelButton().click();
+    verifyRelativeURL('/workbenches/test-project');
   });
 
   it('opens Storage on the first project', () => {

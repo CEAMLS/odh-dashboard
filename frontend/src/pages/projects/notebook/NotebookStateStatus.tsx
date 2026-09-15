@@ -25,6 +25,7 @@ import { useNotebookStatus } from '#~/utilities/notebookControllerUtils';
 import StartNotebookModal from '#~/concepts/notebooks/StartNotebookModal';
 import NotebookStatusLabel from '#~/concepts/notebooks/NotebookStatusLabel';
 import { ProjectDetailsContext } from '#~/pages/projects/ProjectDetailsContext';
+import { WorkbenchPathsContext } from '#~/pages/ceamls/WorkbenchPathsContext';
 import { fireMiscTrackingEvent } from '#~/concepts/analyticsTracking/segmentIOUtils';
 import {
   fireWorkbenchStatusModalAction,
@@ -118,12 +119,13 @@ const NotebookStateStatus: React.FC<NotebookStateStatusProps> = ({
   isVertical = true,
 }) => {
   const { kueueStatusByNotebookName } = React.useContext(ProjectDetailsContext);
+  const workbenchPaths = React.useContext(WorkbenchPathsContext);
   const { notebook, isStarting, isRunning, isStopping, runningPodUid, containerStatuses } =
     notebookState;
   const kueueStatus = kueueStatusByNotebookName[notebook.metadata.name] ?? null;
   const editWorkbenchHref =
     notebook.metadata.namespace && notebook.metadata.name
-      ? `/projects/${notebook.metadata.namespace}/spawner/${notebook.metadata.name}`
+      ? workbenchPaths.edit(notebook.metadata.namespace, notebook.metadata.name)
       : undefined;
   const [unstableNotebookStatus, events] = useNotebookStatus(
     isStarting,

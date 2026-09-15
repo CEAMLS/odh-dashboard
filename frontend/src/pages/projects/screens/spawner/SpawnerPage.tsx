@@ -31,6 +31,7 @@ import { ImageStreamAndVersion } from '#~/types';
 import ExtendedButton from '#~/components/ExtendedButton';
 import GenericSidebar from '#~/components/GenericSidebar';
 import { ProjectDetailsContext } from '#~/pages/projects/ProjectDetailsContext';
+import { WorkbenchPathsContext } from '#~/pages/ceamls/WorkbenchPathsContext';
 import { NotebookKind } from '#~/k8sTypes';
 import useNotebookImageData from '#~/pages/projects/screens/detail/notebooks/useNotebookImageData';
 import NotebookRestartAlert from '#~/pages/projects/components/NotebookRestartAlert';
@@ -97,6 +98,7 @@ const SpawnerPage: React.FC<SpawnerPageProps> = ({ existingNotebook }) => {
     notebooks: { data: notebooks },
     localQueues: { data: localQueues, loaded: localQueuesLoaded },
   } = React.useContext(ProjectDetailsContext);
+  const workbenchPaths = React.useContext(WorkbenchPathsContext);
   const displayName = getDisplayNameFromK8sResource(currentProject);
 
   const k8sNameDescriptionData = useK8sNameDescriptionFieldData({
@@ -306,11 +308,13 @@ const SpawnerPage: React.FC<SpawnerPageProps> = ({ existingNotebook }) => {
       title={existingNotebook ? `Edit ${editNotebookDisplayName}` : 'Create workbench'}
       breadcrumb={
         <Breadcrumb>
-          <BreadcrumbItem render={() => <Link to="/projects">Projects</Link>} />
+          <BreadcrumbItem
+            render={() => <Link to={workbenchPaths.root}>{workbenchPaths.rootLabel}</Link>}
+          />
           <BreadcrumbItem
             style={{ maxWidth: 300 }}
             render={() => (
-              <Link to={`/projects/${currentProject.metadata.name}`}>
+              <Link to={workbenchPaths.project(currentProject.metadata.name)}>
                 <Truncate content={displayName} style={{ textDecoration: 'underline' }} />
               </Link>
             )}

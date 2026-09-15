@@ -11,6 +11,7 @@ import {
   CREATE_WORKBENCH_DISABLED_MESSAGE,
 } from '#~/pages/projects/screens/detail/const';
 import { ProjectDetailsContext } from '#~/pages/projects/ProjectDetailsContext';
+import { WorkbenchPathsContext } from '#~/pages/ceamls/WorkbenchPathsContext';
 import { FAST_POLL_INTERVAL, POLL_INTERVAL } from '#~/utilities/const';
 import DetailsSection from '#~/pages/projects/screens/detail/DetailsSection';
 import { ProjectObjectType, typedEmptyImage } from '#~/concepts/design/utils';
@@ -37,8 +38,9 @@ const NotebookList: React.FC<NotebookListProps> = ({ showTitle = true }) => {
     kueueStatusByNotebookName,
     isKueueLoaded,
   } = React.useContext(ProjectDetailsContext);
+  const workbenchPaths = React.useContext(WorkbenchPathsContext);
   const projectName = currentProject.metadata.name;
-  const createWorkbenchHref = `/projects/${projectName}/spawner`;
+  const createWorkbenchHref = workbenchPaths.create(projectName);
   const isNotebooksEmpty = notebooks.length === 0;
 
   useRefreshInterval(FAST_POLL_INTERVAL, () =>

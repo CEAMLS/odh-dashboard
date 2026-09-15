@@ -26,6 +26,7 @@ import NotebookRouteLink from '#~/pages/projects/notebook/NotebookRouteLink';
 import { NotebookKind } from '#~/k8sTypes';
 import NotebookImagePackageDetails from '#~/pages/projects/notebook/NotebookImagePackageDetails';
 import { ProjectDetailsContext } from '#~/pages/projects/ProjectDetailsContext';
+import { WorkbenchPathsContext } from '#~/pages/ceamls/WorkbenchPathsContext';
 import { TableRowTitleDescription } from '#~/components/table';
 import NotebookStateStatus from '#~/pages/projects/notebook/NotebookStateStatus';
 import { NotebookActionsColumn } from '#~/pages/projects/notebook/NotebookActionsColumn';
@@ -68,7 +69,11 @@ const NotebookTableRow: React.FC<NotebookTableRowProps> = ({
   showOutOfDateElyraInfo,
 }) => {
   const { currentProject, kueueStatusByNotebookName } = React.useContext(ProjectDetailsContext);
-  const editWorkbenchHref = `/projects/${currentProject.metadata.name}/spawner/${obj.notebook.metadata.name}`;
+  const workbenchPaths = React.useContext(WorkbenchPathsContext);
+  const editWorkbenchHref = workbenchPaths.edit(
+    currentProject.metadata.name,
+    obj.notebook.metadata.name,
+  );
   const [isExpanded, setExpanded] = React.useState(false);
   const [notebookImage, loaded, loadError] = useNotebookImage(obj.notebook);
 
