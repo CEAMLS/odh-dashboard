@@ -75,6 +75,16 @@ describe('CEAMLS tenancy projects', () => {
     cy.contains('Problem loading project details').should('exist');
   });
 
+  it('asks for a project request on Home when there are no tenancy projects', () => {
+    initIntercepts([otherProject]);
+    cy.visitWithLogin('/');
+
+    cy.findByTestId('landing-page-projects-empty')
+      .should('contain.text', 'Start by requesting a project')
+      .and('not.contain.text', 'Start by creating your project');
+    cy.findByTestId('create-project-button').should('not.exist');
+  });
+
   it('offers a project request on the Workbenches page when there are no projects', () => {
     initIntercepts([otherProject]);
     cy.visitWithLogin('/workbenches');

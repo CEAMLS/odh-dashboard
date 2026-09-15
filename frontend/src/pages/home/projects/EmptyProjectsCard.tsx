@@ -33,7 +33,9 @@ const EmptyProjectsCard: React.FC<EmptyProjectsCardProps> = ({ allowCreate, onCr
           <Stack hasGutter>
             <StackItem>
               <Content>
-                <Content component="h1">Start by creating your project</Content>
+                <Content component="h1">
+                  {allowCreate ? 'Start by creating your project' : 'Start by requesting a project'}
+                </Content>
                 <Content component="p">
                   From workbenches to model servers, your data science project can be organized and
                   customized to meet your needs.
