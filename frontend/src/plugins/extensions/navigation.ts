@@ -33,7 +33,9 @@ const extensions: (NavExtension | TabRoutePageExtension)[] = [
       title: 'Projects',
       href: '/projects',
       path: '/projects/*',
-      group: '2_projects',
+      // CEAMLS: Projects sits after Storage, near the end of the work items
+      // (upstream: '2_projects'). The other CEAMLS entries are in ceamls.ts.
+      group: '6_y_projects',
       iconRef: () => import('#~/images/icons/ProjectsNavIcon'),
     },
   },

@@ -20,7 +20,12 @@ import { NotebookModel } from '#~/api/models/kubeflow';
 import useKueueNotebookAlerts from '#~/pages/projects/notebook/useKueueNotebookAlerts';
 import NotebookTable from './NotebookTable';
 
-const NotebookList: React.FC = () => {
+type NotebookListProps = {
+  /** CEAMLS: false on the top-level Workbenches page, which already titles itself. */
+  showTitle?: boolean;
+};
+
+const NotebookList: React.FC<NotebookListProps> = ({ showTitle = true }) => {
   const {
     currentProject,
     notebooks: {
@@ -99,10 +104,13 @@ const NotebookList: React.FC = () => {
 
   return (
     <DetailsSection
-      objectType={ProjectObjectType.notebook}
+      objectType={showTitle ? ProjectObjectType.notebook : undefined}
       id={ProjectSectionID.WORKBENCHES}
-      title={(!isNotebooksEmpty && ProjectSectionTitles[ProjectSectionID.WORKBENCHES]) || ''}
+      title={
+        (showTitle && !isNotebooksEmpty && ProjectSectionTitles[ProjectSectionID.WORKBENCHES]) || ''
+      }
       popover={
+        showTitle &&
         !isNotebooksEmpty && (
           <Popover
             headerContent="About workbenches"
