@@ -4,6 +4,7 @@ import { FetchState } from '#~/utilities/useFetchState';
 import { KnownLabels, ProjectKind } from '#~/k8sTypes';
 import { useDashboardNamespace } from '#~/redux/selectors';
 import { getDisplayNameFromK8sResource } from '#~/concepts/k8s/utils';
+import { isTenancyProject } from '#~/pages/ceamls/tenancyProjects';
 import { isAvailableProject } from './utils';
 
 const projectSorter = (projectA: ProjectKind, projectB: ProjectKind) =>
@@ -63,7 +64,11 @@ const ProjectsContextProvider: React.FC<ProjectsProviderProps> = ({ children }) 
         nonActiveProjects: ProjectKind[];
       }>(
         (states, project) => {
-          if (isAvailableProject(project.metadata.name, dashboardNamespace)) {
+          if (
+            isAvailableProject(project.metadata.name, dashboardNamespace) &&
+            // CEAMLS: only projects created by tenancy requests
+            isTenancyProject(project)
+          ) {
             if (project.status?.phase === 'Active') {
               // Project that is active
               states.projects.push(project);

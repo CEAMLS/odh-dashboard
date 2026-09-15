@@ -15,8 +15,6 @@ import { useNavigate } from 'react-router-dom';
 import useDimensions from 'react-cool-dimensions';
 import { ExclamationCircleIcon } from '@patternfly/react-icons';
 import ManageProjectModal from '#~/pages/projects/screens/projects/ManageProjectModal';
-import { AccessReviewResourceAttributes } from '#~/k8sTypes';
-import { useAccessReview } from '#~/api';
 import { SupportedArea } from '#~/concepts/areas';
 import useIsAreaAvailable from '#~/concepts/areas/useIsAreaAvailable';
 import { ProjectsContext } from '#~/concepts/projects/ProjectsContext';
@@ -27,21 +25,18 @@ import ProjectsLoading from './ProjectsLoading';
 import ProjectCard from './ProjectCard';
 import CreateProjectCard from './CreateProjectCard';
 
-const accessReviewResource: AccessReviewResourceAttributes = {
-  group: 'project.openshift.io',
-  resource: 'projectrequests',
-  verb: 'create',
-};
-
 const MAX_SHOWN_PROJECTS = 5;
 const MIN_CARD_WIDTH = 225;
+
+// CEAMLS: projects come only from tenancy requests, so nobody gets the create
+// flow, whatever their RBAC (see NewProjectButton).
+const allowCreate = false;
 
 const ProjectsSection: React.FC = () => {
   const navigate = useNavigate();
 
   const { status: projectsAvailable } = useIsAreaAvailable(SupportedArea.DS_PROJECTS_VIEW);
   const { projects: projects, loaded, loadError } = React.useContext(ProjectsContext);
-  const [allowCreate, rbacLoaded] = useAccessReview(accessReviewResource);
   const [createProjectOpen, setCreateProjectOpen] = React.useState<boolean>(false);
   const [visibleCardCount, setVisibleCardCount] = React.useState<number>(5);
 
@@ -86,7 +81,7 @@ const ProjectsSection: React.FC = () => {
             >
               <EmptyStateBody>{loadError.message}</EmptyStateBody>
             </EmptyState>
-          ) : !rbacLoaded || !loaded ? (
+          ) : !loaded ? (
             <ProjectsLoading />
           ) : !projects.length ? (
             <EmptyProjectsCard allowCreate={allowCreate} onCreateProject={onCreateProject} />

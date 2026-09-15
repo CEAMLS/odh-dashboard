@@ -1,6 +1,7 @@
 import { K8sResourceListResult } from '@openshift/dynamic-plugin-sdk-utils';
 import { genUID } from '#~/__mocks__/mockUtils';
 import { KnownLabels, ProjectKind } from '#~/k8sTypes';
+import { CEAMLS_TENANCY_LABEL } from '#~/pages/ceamls/tenancyProjects';
 
 type MockResourceConfigType = {
   hasAnnotations?: boolean;
@@ -12,6 +13,8 @@ type MockResourceConfigType = {
   enableModelMesh?: boolean;
   enableNIM?: boolean;
   isDSProject?: boolean;
+  /** CEAMLS: created by a tenancy request; the dashboard lists only these. */
+  isTenancyProject?: boolean;
   phase?: 'Active' | 'Terminating';
 };
 
@@ -25,6 +28,7 @@ export const mockProjectK8sResource = ({
   enableNIM = false,
   description = '',
   isDSProject = true,
+  isTenancyProject = true,
   phase = 'Active',
 }: MockResourceConfigType): ProjectKind => ({
   kind: 'Project',
@@ -39,6 +43,7 @@ export const mockProjectK8sResource = ({
         [KnownLabels.MODEL_SERVING_PROJECT]: enableModelMesh ? 'true' : 'false',
       }),
       ...(isDSProject && { [KnownLabels.DASHBOARD_RESOURCE]: 'true' }),
+      ...(isTenancyProject && { [CEAMLS_TENANCY_LABEL]: 'true' }),
     },
     ...(hasAnnotations && {
       annotations: {

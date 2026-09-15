@@ -1,42 +1,24 @@
 import * as React from 'react';
-import { Button } from '@patternfly/react-core';
-import ManageProjectModal from './ManageProjectModal';
+import WhosMyAdministrator from '#~/components/WhosMyAdministrator';
 
 type NewProjectButtonProps = {
   closeOnCreate?: boolean;
   onProjectCreated?: (projectName: string) => void;
 };
 
-const NewProjectButton: React.FC<NewProjectButtonProps> = ({ closeOnCreate, onProjectCreated }) => {
-  const [open, setOpen] = React.useState(false);
-
-  return (
-    <>
-      <Button
-        data-testid="create-data-science-project"
-        variant="primary"
-        onClick={() => setOpen(true)}
-      >
-        Create project
-      </Button>
-      {open && (
-        <ManageProjectModal
-          onClose={(newProjectName) => {
-            if (newProjectName) {
-              if (onProjectCreated) {
-                onProjectCreated(newProjectName);
-              } else if (closeOnCreate) {
-                setOpen(false);
-              }
-              return;
-            }
-
-            setOpen(false);
-          }}
-        />
-      )}
-    </>
-  );
-};
+/**
+ * CEAMLS: projects come only from tenancy requests, and the dashboard lists only
+ * those (pages/ceamls/tenancyProjects). A project created here would never show
+ * up, so every "Create project" entry point offers a project request instead.
+ * The props stay so upstream callers compile unchanged.
+ */
+const NewProjectButton: React.FC<NewProjectButtonProps> = () => (
+  <WhosMyAdministrator
+    buttonLabel="Need another project?"
+    headerContent="Need another project?"
+    leadText="To request a new project, contact your administrator."
+    linkTestId="request-data-science-project"
+  />
+);
 
 export default NewProjectButton;
