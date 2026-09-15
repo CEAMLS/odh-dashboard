@@ -12,6 +12,7 @@ import { useNotebookStatus } from '#~/utilities/notebookControllerUtils';
 import StartNotebookModal from '#~/concepts/notebooks/StartNotebookModal';
 import NotebookStatusLabel from '#~/concepts/notebooks/NotebookStatusLabel';
 import UnderlinedTruncateButton from '#~/components/UnderlinedTruncateButton';
+import { WorkbenchPathsContext } from '#~/pages/ceamls/WorkbenchPathsContext';
 import { NotebookState } from './types';
 
 type NotebookStateStatusProps = {
@@ -45,6 +46,7 @@ const NotebookStateStatus: React.FC<NotebookStateStatusProps> = ({
   isVertical = true,
 }) => {
   const navigate = useNavigate();
+  const workbenchPaths = React.useContext(WorkbenchPathsContext);
   const { notebook, isStarting, isRunning, isStopping, runningPodUid } = notebookState;
   const [unstableNotebookStatus, events] = useNotebookStatus(
     isStarting,
@@ -122,7 +124,7 @@ const NotebookStateStatus: React.FC<NotebookStateStatusProps> = ({
                 onClick={() => {
                   if (notebook.metadata.namespace && notebook.metadata.name) {
                     navigate(
-                      `/projects/${notebook.metadata.namespace}/spawner/${notebook.metadata.name}`,
+                      workbenchPaths.edit(notebook.metadata.namespace, notebook.metadata.name),
                     );
                   }
                 }}

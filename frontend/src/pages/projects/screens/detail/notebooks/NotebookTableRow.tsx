@@ -25,6 +25,7 @@ import { useNotebookKindPodSpecOptionsState } from '#~/concepts/hardwareProfiles
 import { SupportedArea, useIsAreaAvailable } from '#~/concepts/areas';
 import NotebookTableRowHardwareProfile from '#~/pages/projects/screens/detail/notebooks/NotebookTableRowHardwareProfile';
 import StateActionToggle from '#~/components/StateActionToggle';
+import { WorkbenchPathsContext } from '#~/pages/ceamls/WorkbenchPathsContext';
 import { NotebookImageStatus } from './const';
 import { NotebookImageDisplayName } from './NotebookImageDisplayName';
 import NotebookStorageBars from './NotebookStorageBars';
@@ -50,6 +51,7 @@ const NotebookTableRow: React.FC<NotebookTableRowProps> = ({
   showOutOfDateElyraInfo,
 }) => {
   const { currentProject } = React.useContext(ProjectDetailsContext);
+  const workbenchPaths = React.useContext(WorkbenchPathsContext);
   const navigate = useNavigate();
   const [isExpanded, setExpanded] = React.useState(false);
   const { size: notebookSize } = useNotebookDeploymentSize(obj.notebook);
@@ -117,7 +119,7 @@ const NotebookTableRow: React.FC<NotebookTableRowProps> = ({
     ) {
       setIsModalOpen(true);
     } else {
-      navigate(`/projects/${currentProject.metadata.name}/spawner/${obj.notebook.metadata.name}`);
+      navigate(workbenchPaths.edit(currentProject.metadata.name, obj.notebook.metadata.name));
     }
   };
 
@@ -174,7 +176,10 @@ const NotebookTableRow: React.FC<NotebookTableRowProps> = ({
                     <Button
                       onClick={() => {
                         navigate(
-                          `/projects/${currentProject.metadata.name}/spawner/${obj.notebook.metadata.name}`,
+                          workbenchPaths.edit(
+                            currentProject.metadata.name,
+                            obj.notebook.metadata.name,
+                          ),
                         );
                       }}
                     >

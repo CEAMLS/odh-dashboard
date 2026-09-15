@@ -13,6 +13,7 @@ import { ProjectObjectType, typedEmptyImage } from '#~/concepts/design/utils';
 import useRefreshInterval from '#~/utilities/useRefreshInterval';
 import { useKueueConfiguration } from '#~/concepts/hardwareProfiles/kueueUtils';
 import { KUEUE_WORKBENCH_CREATION_DISABLED_MESSAGE } from '#~/concepts/hardwareProfiles/kueueConstants';
+import { WorkbenchPathsContext } from '#~/pages/ceamls/WorkbenchPathsContext';
 import NotebookTable from './NotebookTable';
 
 type NotebookListProps = {
@@ -30,6 +31,7 @@ const NotebookList: React.FC<NotebookListProps> = ({ showTitle = true }) => {
       refresh: refreshNotebooks,
     },
   } = React.useContext(ProjectDetailsContext);
+  const workbenchPaths = React.useContext(WorkbenchPathsContext);
   const navigate = useNavigate();
   const projectName = currentProject.metadata.name;
   const isNotebooksEmpty = notebooks.length === 0;
@@ -54,7 +56,7 @@ const NotebookList: React.FC<NotebookListProps> = ({ showTitle = true }) => {
         <Tooltip content={KUEUE_WORKBENCH_CREATION_DISABLED_MESSAGE}>
           <Button
             key={`action-${ProjectSectionID.WORKBENCHES}`}
-            onClick={() => navigate(`/projects/${projectName}/spawner`)}
+            onClick={() => navigate(workbenchPaths.create(projectName))}
             data-testid="create-workbench-button"
             variant="primary"
             isAriaDisabled
@@ -67,7 +69,7 @@ const NotebookList: React.FC<NotebookListProps> = ({ showTitle = true }) => {
     return (
       <Button
         key={`action-${ProjectSectionID.WORKBENCHES}`}
-        onClick={() => navigate(`/projects/${projectName}/spawner`)}
+        onClick={() => navigate(workbenchPaths.create(projectName))}
         data-testid="create-workbench-button"
         variant="primary"
       >

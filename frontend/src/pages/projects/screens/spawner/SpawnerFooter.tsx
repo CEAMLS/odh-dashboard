@@ -19,7 +19,7 @@ import {
 import { EnvVariable, StartNotebookData, StorageData } from '#~/pages/projects/types';
 import { useUser } from '#~/redux/selectors';
 import { ProjectDetailsContext } from '#~/pages/projects/ProjectDetailsContext';
-import { ProjectSectionID } from '#~/pages/projects/screens/detail/types';
+import { WorkbenchPathsContext } from '#~/pages/ceamls/WorkbenchPathsContext';
 import { Connection } from '#~/concepts/connectionTypes/types';
 import { fireFormTrackingEvent } from '#~/concepts/analyticsTracking/segmentIOUtils';
 import {
@@ -86,6 +86,7 @@ const SpawnerFooter: React.FC<SpawnerFooterProps> = ({
       startNotebookData.image.imageStream?.metadata.namespace === projectName);
 
   const { username } = useUser();
+  const workbenchPaths = React.useContext(WorkbenchPathsContext);
 
   const afterStart = (name: string, type: 'created' | 'updated') => {
     const { image, podSpecOptions } = startNotebookData;
@@ -112,7 +113,7 @@ const SpawnerFooter: React.FC<SpawnerFooterProps> = ({
     refreshNotebooks();
     refreshConnections();
 
-    navigate(`/projects/${projectName}?section=${ProjectSectionID.WORKBENCHES}`);
+    navigate(workbenchPaths.list(projectName));
   };
   const handleError = (e: K8sStatusError) => {
     fireFormTrackingEvent('Workbench Created', {
@@ -308,7 +309,7 @@ const SpawnerFooter: React.FC<SpawnerFooterProps> = ({
                 fireFormTrackingEvent(`Workbench ${editNotebook ? 'Updated' : 'Created'}`, {
                   outcome: TrackingOutcome.cancel,
                 });
-                navigate(`/projects/${projectName}?section=${ProjectSectionID.WORKBENCHES}`);
+                navigate(workbenchPaths.list(projectName));
               }}
             >
               Cancel

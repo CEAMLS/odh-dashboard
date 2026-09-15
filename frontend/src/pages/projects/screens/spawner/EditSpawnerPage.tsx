@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { ProjectDetailsContext } from '#~/pages/projects/ProjectDetailsContext';
 import { NotebookState } from '#~/pages/projects/notebook/types';
 import { getDisplayNameFromK8sResource } from '#~/concepts/k8s/utils';
+import { WorkbenchPathsContext } from '#~/pages/ceamls/WorkbenchPathsContext';
 import SpawnerPage from './SpawnerPage';
 
 const EditSpawnerPage: React.FC = () => {
@@ -20,6 +21,7 @@ const EditSpawnerPage: React.FC = () => {
     currentProject,
     notebooks: { data, loaded, error },
   } = React.useContext(ProjectDetailsContext);
+  const workbenchPaths = React.useContext(WorkbenchPathsContext);
   const navigate = useNavigate();
   const { notebookName } = useParams();
   const ref = React.useRef<NotebookState>();
@@ -73,7 +75,7 @@ const EditSpawnerPage: React.FC = () => {
             <Button
               data-testid="return-to-project-button"
               variant="primary"
-              onClick={() => navigate(`/projects/${currentProject.metadata.name}`)}
+              onClick={() => navigate(workbenchPaths.project(currentProject.metadata.name))}
             >
               Return to {getDisplayNameFromK8sResource(currentProject)}
             </Button>

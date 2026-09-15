@@ -3,6 +3,7 @@ import { ActionsColumn } from '@patternfly/react-table';
 import { useNavigate } from 'react-router-dom';
 import { NotebookKind, ProjectKind } from '#~/k8sTypes';
 import { NotebookState } from '#~/pages/projects/notebook/types';
+import { WorkbenchPathsContext } from '#~/pages/ceamls/WorkbenchPathsContext';
 
 type Props = {
   project: ProjectKind;
@@ -16,6 +17,7 @@ export const NotebookActionsColumn: React.FC<Props> = ({
   onNotebookDelete,
 }) => {
   const navigate = useNavigate();
+  const workbenchPaths = React.useContext(WorkbenchPathsContext);
 
   return (
     <ActionsColumn
@@ -25,7 +27,7 @@ export const NotebookActionsColumn: React.FC<Props> = ({
           title: 'Edit workbench',
           onClick: () => {
             navigate(
-              `/projects/${project.metadata.name}/spawner/${notebookState.notebook.metadata.name}`,
+              workbenchPaths.edit(project.metadata.name, notebookState.notebook.metadata.name),
             );
           },
         },
