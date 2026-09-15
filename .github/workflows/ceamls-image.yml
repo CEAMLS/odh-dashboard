@@ -1,0 +1,70 @@
+# CEAMLS: build the dashboard image from this branch and push it to quay.io.
+# The cluster pins the pushed digest (printed in the job summary) in the
+# ceamls_ai_cluster GitOps repo; tags are for humans only.
+#
+# Repository settings:
+#   variable QUAY_IMAGE_REPO      e.g. quay.io/<org>/odh-dashboard
+#   secret   QUAY_ROBOT_USERNAME  quay.io robot account with write on that repo
+#   secret   QUAY_ROBOT_TOKEN
+name: CEAMLS dashboard image
+on:
+  push:
+    branches:
+      - ceamls/sidebar
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ceamls-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v4
+
+      - name: Set image tags
+        shell: bash
+        run: |
+          echo "SHORT_SHA=$(git rev-parse --short=7 HEAD)" >> "$GITHUB_ENV"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to quay.io
+        uses: docker/login-action@v3
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_ROBOT_USERNAME }}
+          password: ${{ secrets.QUAY_ROBOT_TOKEN }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ vars.QUAY_IMAGE_REPO }}:v2.38.1-odh-ceamls-${{ env.SHORT_SHA }}
+            ${{ vars.QUAY_IMAGE_REPO }}:ceamls-sidebar
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        shell: bash
+        run: |
+          {
+            echo "### Image"
+            echo
+            echo "Pin this in gitops (RELATED_IMAGE_ODH_DASHBOARD_IMAGE):"
+            echo
+            echo '```'
+            echo "${{ vars.QUAY_IMAGE_REPO }}@${{ steps.build.outputs.digest }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
