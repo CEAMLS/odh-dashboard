@@ -11,7 +11,12 @@ import { ProjectObjectType, typedEmptyImage } from '#~/concepts/design/utils';
 import StorageTable from './StorageTable';
 import ClusterStorageModal from './ClusterStorageModal';
 
-const StorageList: React.FC = () => {
+type StorageListProps = {
+  /** CEAMLS: false on the top-level Storage page, which already titles itself. */
+  showTitle?: boolean;
+};
+
+const StorageList: React.FC<StorageListProps> = ({ showTitle = true }) => {
   const [isOpen, setOpen] = React.useState(false);
   const {
     notebooks: { refresh: refreshNotebooks },
@@ -28,18 +33,20 @@ const StorageList: React.FC = () => {
     <>
       <DetailsSection
         id={ProjectSectionID.CLUSTER_STORAGES}
-        objectType={ProjectObjectType.clusterStorage}
-        title={ProjectSectionTitles[ProjectSectionID.CLUSTER_STORAGES] || ''}
+        objectType={showTitle ? ProjectObjectType.clusterStorage : undefined}
+        title={(showTitle && ProjectSectionTitles[ProjectSectionID.CLUSTER_STORAGES]) || ''}
         popover={
-          <Popover
-            headerContent="About cluster storage"
-            bodyContent="Cluster storage saves your project’s data on a selected cluster. You can optionally connect cluster storage to a workbench. "
-          >
-            <DashboardPopupIconButton
-              icon={<OutlinedQuestionCircleIcon />}
-              aria-label="More info"
-            />
-          </Popover>
+          showTitle && (
+            <Popover
+              headerContent="About cluster storage"
+              bodyContent="Cluster storage saves your project’s data on a selected cluster. You can optionally connect cluster storage to a workbench. "
+            >
+              <DashboardPopupIconButton
+                icon={<OutlinedQuestionCircleIcon />}
+                aria-label="More info"
+              />
+            </Popover>
+          )
         }
         actions={[
           <Button

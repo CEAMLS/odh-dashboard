@@ -15,7 +15,12 @@ import { useKueueConfiguration } from '#~/concepts/hardwareProfiles/kueueUtils';
 import { KUEUE_WORKBENCH_CREATION_DISABLED_MESSAGE } from '#~/concepts/hardwareProfiles/kueueConstants';
 import NotebookTable from './NotebookTable';
 
-const NotebookList: React.FC = () => {
+type NotebookListProps = {
+  /** CEAMLS: false on the top-level Workbenches page, which already titles itself. */
+  showTitle?: boolean;
+};
+
+const NotebookList: React.FC<NotebookListProps> = ({ showTitle = true }) => {
   const {
     currentProject,
     notebooks: {
@@ -73,10 +78,13 @@ const NotebookList: React.FC = () => {
 
   return (
     <DetailsSection
-      objectType={ProjectObjectType.notebook}
+      objectType={showTitle ? ProjectObjectType.notebook : undefined}
       id={ProjectSectionID.WORKBENCHES}
-      title={(!isNotebooksEmpty && ProjectSectionTitles[ProjectSectionID.WORKBENCHES]) || ''}
+      title={
+        (showTitle && !isNotebooksEmpty && ProjectSectionTitles[ProjectSectionID.WORKBENCHES]) || ''
+      }
       popover={
+        showTitle &&
         !isNotebooksEmpty && (
           <Popover
             headerContent="About workbenches"

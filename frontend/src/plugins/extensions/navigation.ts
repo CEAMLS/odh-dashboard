@@ -26,10 +26,10 @@ const extensions: NavExtension[] = [
     },
     properties: {
       id: 'dsg',
-      title: 'Data science projects',
+      title: 'Projects',
       href: '/projects',
       path: '/projects/*',
-      group: '2_projects',
+      group: '8_projects',
     },
   },
 
@@ -38,7 +38,7 @@ const extensions: NavExtension[] = [
     properties: {
       id: 'models',
       title: 'Models',
-      group: '3_models',
+      group: '4_models',
     },
   },
   // This is being replaced by the upstream extension for model registry and will be removed along with the old MR UI code as part of https://issues.redhat.com/browse/RHOAIENG-34088
@@ -99,8 +99,8 @@ const extensions: NavExtension[] = [
     type: 'app.navigation/section',
     properties: {
       id: 'pipelines-and-runs',
-      title: 'Data science pipelines',
-      group: '4_pipelines',
+      title: 'Pipelines',
+      group: '3_pipelines',
     },
   },
   {
