@@ -10,18 +10,17 @@ import { getUserInfo } from '../../../utils/userUtils';
 import { errorHandler } from '../../../utils';
 
 /**
- * CEAMLS single logout: the one entry point both apps send the user to, from
- * this dashboard's "Log out" and from the console's logoutRedirect alike.
- *
- * It runs FIRST, while every session is still alive, because each step needs
- * the one before it to get in — a user who never opened the dashboard is
- * signed in here silently by the SSO session that is about to die:
+ * CEAMLS single logout, the part that needs the user's identity:
  *
  *   1. revoke every OpenShift token the user holds (this app's AND the
  *      console's — that is the only way to sign the console out from here),
- *   2. expire this app's oauth-proxy cookie,
- *   3. hand the browser a page that ends the OAuth server's session and then
- *      the Keycloak SSO session, and stops there (see the util).
+ *   2. expire this app's oauth-proxy cookie.
+ *
+ * It runs FIRST in the chain, while every session is still alive, because
+ * each later step needs the one before it to get in. The browser does not
+ * come here directly any more: /metrics-logout is the entry point and calls
+ * this with fetch, so that a console user with no session here is never shown
+ * a login page mid-logout. Opened directly it still works on its own.
  *
  * Every step is best effort: a logout must never dead-end on an error page.
  * It answers to GET because a redirect chain cannot POST, which means another

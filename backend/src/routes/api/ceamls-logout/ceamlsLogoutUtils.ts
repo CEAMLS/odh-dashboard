@@ -79,15 +79,21 @@ export const expireProxyCookies = (request: FastifyRequest): string[] => {
 };
 
 /**
- * The last two hops, run from the browser because only the browser holds the
+ * The hops only the browser can make, because only the browser holds the
  * cookies they end.
  *
- * 1. The OpenShift OAuth server keeps its own short-lived session cookie, and
+ * 1. (`revokeFirst`, the public page only) call this app's authenticated
+ *    /api/ceamls-logout from here rather than sending the browser there, so
+ *    that a user who never opened the dashboard — and therefore has no
+ *    oauth-proxy cookie — is not shown a login page in the middle of logging
+ *    out. Signed in, it revokes every token and expires the cookie; signed
+ *    out, it 403s and there was nothing to revoke either way.
+ * 2. The OpenShift OAuth server keeps its own short-lived session cookie, and
  *    while it lives it hands out fresh tokens with no password. Its logout
  *    endpoint only accepts a relative "then", so it cannot redirect onward to
  *    Keycloak — the POST goes out as a background fetch instead and we keep
  *    control of where the browser goes next.
- * 2. Keycloak ends the SSO session, and it goes LAST: everything before it
+ * 3. Keycloak ends the SSO session, and it goes LAST: everything before it
  *    needs a live session to reach, and nothing after it can silently sign
  *    the user back in.
  *
@@ -95,11 +101,21 @@ export const expireProxyCookies = (request: FastifyRequest): string[] => {
  * makes it start a fresh login, so a logout that worked looks like one that
  * failed. Keycloak's own "You are logged out" page is the end of the road.
  */
-export const signOutPage = (appsDomain: string): string => {
+export const signOutPage = (appsDomain: string, { revokeFirst = false } = {}): string => {
   const oauthLogout = `https://oauth-openshift.${appsDomain}/logout`;
   const ssoLogout =
     `https://keycloak.${appsDomain}/realms/ceamls/protocol/openid-connect/logout` +
     '?client_id=openshift';
+  // Same origin, so these two are plain relative fetches. /oauth/sign_out is
+  // oauth-proxy's own and clears the cookie whether or not one was sent.
+  const revokeStep = revokeFirst
+    ? `fetch('/api/ceamls-logout', { credentials: 'same-origin' })
+            .catch(nothing)
+            .then(function () {
+              return fetch('/oauth/sign_out', { credentials: 'same-origin' }).catch(nothing);
+            })
+            .then(post, post)`
+    : 'post()';
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -126,15 +142,19 @@ export const signOutPage = (appsDomain: string): string => {
           done = true;
           window.location.replace(next);
         };
-        try {
-          fetch('${oauthLogout}', {
+        var nothing = function () {};
+        var post = function () {
+          return fetch('${oauthLogout}', {
             method: 'POST',
             mode: 'no-cors',
             credentials: 'include',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: 'then=%2F',
-          }).then(go, go);
-          window.setTimeout(go, 4000);
+          });
+        };
+        try {
+          ${revokeStep}.then(go, go);
+          window.setTimeout(go, 6000);
         } catch (e) {
           go();
         }
