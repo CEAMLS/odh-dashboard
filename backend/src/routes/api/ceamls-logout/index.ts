@@ -2,24 +2,26 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import {
   expireProxyCookies,
   getAppsDomain,
-  oauthLogoutPage,
   revokeUserTokens,
+  signOutPage,
 } from './ceamlsLogoutUtils';
 import { KubeFastifyInstance } from '../../../types';
 import { getUserInfo } from '../../../utils/userUtils';
 import { errorHandler } from '../../../utils';
 
 /**
- * CEAMLS single logout. Reached as the post-logout redirect of the Keycloak
- * logout endpoint, from this dashboard's "Log out" and from the console's
- * logoutRedirect alike, so by the time it runs the SSO session is already
- * gone. It then ends everything the SSO session left behind:
+ * CEAMLS single logout: the one entry point both apps send the user to, from
+ * this dashboard's "Log out" and from the console's logoutRedirect alike.
+ *
+ * It runs FIRST, while every session is still alive, because each step needs
+ * the one before it to get in — a user who never opened the dashboard is
+ * signed in here silently by the SSO session that is about to die:
  *
  *   1. revoke every OpenShift token the user holds (this app's AND the
  *      console's — that is the only way to sign the console out from here),
  *   2. expire this app's oauth-proxy cookie,
- *   3. hand the browser to the OAuth server's logout (see the util), which
- *      lands on the console, which can now only offer a login page.
+ *   3. hand the browser a page that ends the OAuth server's session and then
+ *      the Keycloak SSO session, and stops there (see the util).
  *
  * Every step is best effort: a logout must never dead-end on an error page.
  * It answers to GET because a redirect chain cannot POST, which means another
@@ -40,6 +42,6 @@ export default async (fastify: KubeFastifyInstance): Promise<void> => {
     return reply
       .header('Cache-Control', 'no-store')
       .type('text/html; charset=utf-8')
-      .send(oauthLogoutPage(getAppsDomain(request)));
+      .send(signOutPage(getAppsDomain(request)));
   });
 };

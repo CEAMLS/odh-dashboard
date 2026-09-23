@@ -79,14 +79,28 @@ export const expireProxyCookies = (request: FastifyRequest): string[] => {
 };
 
 /**
- * Last hop of the chain. The OpenShift OAuth server keeps its own short-lived
- * session, and while it lives it hands out fresh tokens with no password — so
- * the browser has to POST to its logout endpoint too. That endpoint only
- * accepts a "then" on the console's host, which is where we land: with the
- * Keycloak session, every token and this session gone, the console can only
- * send the user to the Keycloak login page.
+ * The last two hops, run from the browser because only the browser holds the
+ * cookies they end.
+ *
+ * 1. The OpenShift OAuth server keeps its own short-lived session cookie, and
+ *    while it lives it hands out fresh tokens with no password. Its logout
+ *    endpoint only accepts a relative "then", so it cannot redirect onward to
+ *    Keycloak — the POST goes out as a background fetch instead and we keep
+ *    control of where the browser goes next.
+ * 2. Keycloak ends the SSO session, and it goes LAST: everything before it
+ *    needs a live session to reach, and nothing after it can silently sign
+ *    the user back in.
+ *
+ * We deliberately do NOT redirect to an app at the end. Landing on the console
+ * makes it start a fresh login, so a logout that worked looks like one that
+ * failed. Keycloak's own "You are logged out" page is the end of the road.
  */
-export const oauthLogoutPage = (appsDomain: string): string => `<!doctype html>
+export const signOutPage = (appsDomain: string): string => {
+  const oauthLogout = `https://oauth-openshift.${appsDomain}/logout`;
+  const ssoLogout =
+    `https://keycloak.${appsDomain}/realms/ceamls/protocol/openid-connect/logout` +
+    '?client_id=openshift';
+  return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -95,13 +109,38 @@ export const oauthLogoutPage = (appsDomain: string): string => `<!doctype html>
   </head>
   <body style="font-family: sans-serif; text-align: center; margin-top: 4rem">
     <p>Signing you out&hellip;</p>
-    <form id="openshift-logout" method="POST" action="https://oauth-openshift.${appsDomain}/logout">
-      <input type="hidden" name="then" value="https://console-openshift-console.${appsDomain}/" />
-      <noscript><button type="submit">Finish signing out</button></noscript>
-    </form>
+    <p><a id="sso-logout" href="${ssoLogout}">Finish signing out</a></p>
+    <noscript>
+      <form method="POST" action="${oauthLogout}">
+        <input type="hidden" name="then" value="/" />
+        <button type="submit">End the OpenShift session</button>
+      </form>
+      <p>Then use the link above to end the single sign-on session.</p>
+    </noscript>
     <script>
-      document.getElementById('openshift-logout').submit();
+      (function () {
+        var next = document.getElementById('sso-logout').href;
+        var done = false;
+        var go = function () {
+          if (done) return;
+          done = true;
+          window.location.replace(next);
+        };
+        try {
+          fetch('${oauthLogout}', {
+            method: 'POST',
+            mode: 'no-cors',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'then=%2F',
+          }).then(go, go);
+          window.setTimeout(go, 4000);
+        } catch (e) {
+          go();
+        }
+      })();
     </script>
   </body>
 </html>
 `;
+};
