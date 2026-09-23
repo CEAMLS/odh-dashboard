@@ -24,7 +24,7 @@ import AboutDialog from '#~/app/AboutDialog';
 import AppLauncher from './AppLauncher';
 import { useAppContext } from './AppContext';
 import { useThemeContext } from './ThemeContext';
-import { logout } from './appUtils';
+import { logoutAndEndSsoSession } from './appUtils';
 import FeatureFlagLauncher, { FeatureFlagLauncherProps } from './featureFlags/FeatureFlagLauncher';
 
 interface HeaderToolsProps {
@@ -60,11 +60,7 @@ const HeaderTools: React.FC<Props> = ({ onNotificationsClick, ...devFeatureFlags
 
   const handleLogout = () => {
     setUserMenuOpen(false);
-    logout().then(() => {
-      /* eslint-disable-next-line no-console */
-      console.log('logged out');
-      window.location.reload();
-    });
+    logoutAndEndSsoSession();
   };
 
   const userMenuItems = [

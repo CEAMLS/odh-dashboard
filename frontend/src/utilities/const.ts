@@ -22,6 +22,9 @@ const DASHBOARD_CONFIG = process.env.DASHBOARD_CONFIG || 'odh-dashboard-config';
 const EXT_CLUSTER = process.env.EXT_CLUSTER;
 const INTERNAL_DASHBOARD_VERSION = process.env.INTERNAL_DASHBOARD_VERSION || '';
 const CONSOLE_LINK_DOMAIN = process.env.CONSOLE_LINK_DOMAIN;
+// CEAMLS: where to send the browser after signing out, so that the Keycloak
+// SSO session ends too and not just this app's cookie. Empty = stock reload.
+const SSO_LOGOUT_URL = process.env.ODH_SSO_LOGOUT_URL || '';
 const MF_CONFIG = process.env.MF_CONFIG;
 
 export {
@@ -43,6 +46,7 @@ export {
   INTERNAL_DASHBOARD_VERSION,
   CONSOLE_LINK_DOMAIN,
   MF_CONFIG,
+  SSO_LOGOUT_URL,
 };
 
 export const DOC_TYPE_TOOLTIPS = {

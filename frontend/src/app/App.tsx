@@ -36,7 +36,7 @@ import AppNotificationDrawer from './AppNotificationDrawer';
 import { AppContext } from './AppContext';
 import { useApplicationSettings } from './useApplicationSettings';
 import TelemetrySetup from './TelemetrySetup';
-import { logout } from './appUtils';
+import { logoutAndEndSsoSession } from './appUtils';
 import QuickStarts from './QuickStarts';
 import SessionExpiredModal from './SessionExpiredModal';
 import DevFeatureFlagsBanner from './featureFlags/DevFeatureFlagsBanner';
@@ -114,10 +114,7 @@ const App: React.FC = () => {
               </Alert>
             </StackItem>
             <StackItem>
-              <Button
-                variant="secondary"
-                onClick={() => logout().then(() => window.location.reload())}
-              >
+              <Button variant="secondary" onClick={() => logoutAndEndSsoSession()}>
                 Logout
               </Button>
             </StackItem>
