@@ -1,10 +1,5 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
-import {
-  expireProxyCookies,
-  getAppsDomain,
-  revokeUserTokens,
-  signOutPage,
-} from './ceamlsLogoutUtils';
+import { expireProxyCookies, revokeUserTokens } from './ceamlsLogoutUtils';
 import { KubeFastifyInstance } from '../../../types';
 import { getUserInfo } from '../../../utils/userUtils';
 import { errorHandler } from '../../../utils';
@@ -16,15 +11,14 @@ import { errorHandler } from '../../../utils';
  *      console's — that is the only way to sign the console out from here),
  *   2. expire this app's oauth-proxy cookie.
  *
- * It runs FIRST in the chain, while every session is still alive, because
- * each later step needs the one before it to get in. The browser does not
- * come here directly any more: /metrics-logout is the entry point and calls
- * this with fetch, so that a console user with no session here is never shown
- * a login page mid-logout. Opened directly it still works on its own.
+ * Called with fetch from /metrics-logout/oauth (the public chain page), never
+ * navigated to, so it answers 204. It runs after Keycloak's SSO session has
+ * ended, which does not stop it: this app's cookie carries its own token and
+ * never asks Keycloak again, so a signed-in user still gets through the proxy.
  *
- * Every step is best effort: a logout must never dead-end on an error page.
- * It answers to GET because a redirect chain cannot POST, which means another
- * site could trigger a logout — that costs a session, never grants one.
+ * Every step is best effort: a logout must never dead-end on an error. It
+ * answers to GET, which means another site could trigger a logout — that
+ * costs a session, never grants one.
  */
 export default async (fastify: KubeFastifyInstance): Promise<void> => {
   fastify.get('/', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -38,9 +32,6 @@ export default async (fastify: KubeFastifyInstance): Promise<void> => {
     }
 
     expireProxyCookies(request).forEach((cookie) => reply.header('set-cookie', cookie));
-    return reply
-      .header('Cache-Control', 'no-store')
-      .type('text/html; charset=utf-8')
-      .send(signOutPage(getAppsDomain(request)));
+    return reply.header('Cache-Control', 'no-store').code(204).send();
   });
 };
