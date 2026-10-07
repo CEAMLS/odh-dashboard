@@ -1,7 +1,5 @@
 import type { NavExtension, RouteExtension } from '@odh-dashboard/plugin-core/extension-points';
-// Allow this import as it consists of types and enums only.
-// eslint-disable-next-line no-restricted-syntax
-import { SupportedArea } from '#~/concepts/areas/types';
+import { SupportedArea } from '@odh-dashboard/plugin-core/areas';
 
 // CEAMLS: top-level, project-scoped Workbenches and Storage pages. Kept apart
 // from navigation.ts/routes.ts so a rebase onto upstream only has to carry the

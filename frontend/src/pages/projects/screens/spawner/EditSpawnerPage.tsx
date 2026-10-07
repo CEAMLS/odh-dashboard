@@ -41,7 +41,9 @@ const EditSpawnerPage: React.FC = () => {
           <EmptyStateFooter>
             <Button
               variant="primary"
-              component={(props: React.ComponentProps<'a'>) => <Link {...props} to={workbenchPaths.root} />}
+              component={(props: React.ComponentProps<'a'>) => (
+                <Link {...props} to={workbenchPaths.root} />
+              )}
             >
               View my projects
             </Button>
