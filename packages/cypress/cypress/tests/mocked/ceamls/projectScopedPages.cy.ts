@@ -1,20 +1,18 @@
-import {
-  mockDashboardConfig,
-  mockDscStatus,
-  mockK8sResourceList,
-  mockNotebookK8sResource,
-  mockProjectK8sResource,
-  mockStorageClassList,
-} from '#~/__mocks__';
-import { mockClusterSettings } from '#~/__mocks__/mockClusterSettings';
-import { mockImageStreamK8sResource } from '#~/__mocks__/mockImageStreamK8sResource';
-import { mockPodK8sResource } from '#~/__mocks__/mockPodK8sResource';
-import { mockPrometheusQueryResponse } from '#~/__mocks__/mockPrometheusQueryResponse';
-import { mockPVCK8sResource } from '#~/__mocks__/mockPVCK8sResource';
-import { appChrome } from '#~/__tests__/cypress/cypress/pages/appChrome';
-import { clusterStorage } from '#~/__tests__/cypress/cypress/pages/clusterStorage';
-import { createSpawnerPage, workbenchPage } from '#~/__tests__/cypress/cypress/pages/workbench';
-import { verifyRelativeURL } from '#~/__tests__/cypress/cypress/utils/url';
+import { mockDashboardConfig } from '@odh-dashboard/k8s-core/__mocks__/mockDashboardConfig';
+import { mockK8sResourceList } from '@odh-dashboard/k8s-core/__mocks__/mockK8sResourceList';
+import { mockProjectK8sResource } from '@odh-dashboard/k8s-core/__mocks__/mockProjectK8sResource';
+import { mockPodK8sResource } from '@odh-dashboard/k8s-core/__mocks__/mockPodK8sResource';
+import { mockPVCK8sResource } from '@odh-dashboard/k8s-core/__mocks__/mockPVCK8sResource';
+import { mockDscStatus } from '@odh-dashboard/plugin-core/__mocks__/mockDscStatus';
+import { mockNotebookK8sResource, mockStorageClassList } from '@odh-dashboard/internal/__mocks__';
+import { mockClusterSettings } from '@odh-dashboard/internal/__mocks__/mockClusterSettings';
+import { mockImageStreamK8sResource } from '@odh-dashboard/internal/__mocks__/mockImageStreamK8sResource';
+import { mockPrometheusQueryResponse } from '@odh-dashboard/internal/__mocks__/mockPrometheusQueryResponse';
+import type { ProjectKind } from '@odh-dashboard/k8s-core';
+import { appChrome } from '../../../pages/appChrome';
+import { clusterStorage } from '../../../pages/clusterStorage';
+import { createSpawnerPage, workbenchPage } from '../../../pages/workbench';
+import { verifyRelativeURL } from '../../../utils/url';
 import {
   ImageStreamModel,
   NotebookModel,
@@ -22,8 +20,7 @@ import {
   PodModel,
   ProjectModel,
   StorageClassModel,
-} from '#~/__tests__/cypress/cypress/utils/models';
-import type { ProjectKind } from '#~/k8sTypes';
+} from '../../../utils/models';
 
 // CEAMLS: the top-level Workbenches and Storage pages, which show one project
 // at a time behind a project selector (pages/ceamls).
@@ -33,14 +30,7 @@ const initIntercepts = ({
 }: {
   projects?: ProjectKind[];
 }) => {
-  cy.interceptOdh(
-    'GET /api/dsc/status',
-    mockDscStatus({
-      installedComponents: {
-        workbenches: true,
-      },
-    }),
-  );
+  cy.interceptOdh('GET /api/dsc/status', mockDscStatus({}));
   cy.interceptOdh('GET /api/config', mockDashboardConfig({}));
   cy.interceptOdh('GET /api/cluster-settings', mockClusterSettings({}));
   cy.interceptOdh('POST /api/prometheus/pvc', {
@@ -97,7 +87,7 @@ describe('CEAMLS project-scoped pages', () => {
     initIntercepts({});
     appChrome.visit();
 
-    appChrome.findNavItem('Workbenches').click();
+    appChrome.findNavItem({ name: 'Workbenches' }).click();
     verifyRelativeURL('/workbenches/test-project');
     cy.findByTestId('app-page-title').should('have.text', 'Workbenches');
     workbenchPage.getNotebookRow('CEAMLS Notebook').find().should('exist');
@@ -127,7 +117,7 @@ describe('CEAMLS project-scoped pages', () => {
     workbenchPage.findCreateButton().click();
     verifyRelativeURL('/workbenches/test-project/spawner');
     createSpawnerPage.shouldHaveAppTitle();
-    appChrome.findNavItem('Workbenches').should('have.attr', 'aria-current', 'page');
+    appChrome.findNavItem({ name: 'Workbenches' }).should('have.attr', 'aria-current', 'page');
     findBreadcrumb().findByRole('link', { name: 'Workbenches' }).click();
     verifyRelativeURL('/workbenches/test-project');
 
@@ -143,7 +133,7 @@ describe('CEAMLS project-scoped pages', () => {
     workbenchPage.getNotebookRow('CEAMLS Notebook').findKebabAction('Edit workbench').click();
     verifyRelativeURL('/workbenches/test-project/spawner/ceamls-notebook');
     cy.findByTestId('app-page-title').should('have.text', 'Edit CEAMLS Notebook');
-    appChrome.findNavItem('Workbenches').should('have.attr', 'aria-current', 'page');
+    appChrome.findNavItem({ name: 'Workbenches' }).should('have.attr', 'aria-current', 'page');
     findBreadcrumb()
       .findByRole('link', { name: 'Test Project' })
       .should('have.attr', 'href', '/workbenches/test-project');
@@ -160,6 +150,6 @@ describe('CEAMLS project-scoped pages', () => {
     cy.findByTestId('app-page-title').should('have.text', 'Storage');
     clusterStorage.getClusterStorageRow('CEAMLS Storage').find().should('exist');
     cy.get('#cluster-storages-title').should('not.exist');
-    clusterStorage.findCreateButtonFromActions().should('exist');
+    clusterStorage.findAddClusterStorageButton().should('exist');
   });
 });
