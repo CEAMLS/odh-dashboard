@@ -7,7 +7,7 @@ import { mockDscStatus } from '@odh-dashboard/plugin-core/__mocks__/mockDscStatu
 import { mockNotebookK8sResource, mockStorageClassList } from '@odh-dashboard/internal/__mocks__';
 import { mockClusterSettings } from '@odh-dashboard/internal/__mocks__/mockClusterSettings';
 import { mockImageStreamK8sResource } from '@odh-dashboard/internal/__mocks__/mockImageStreamK8sResource';
-import { mockPrometheusQueryResponse } from '@odh-dashboard/internal/__mocks__/mockPrometheusQueryResponse';
+import { mockPrometheusQueryVectorResponse } from '@odh-dashboard/internal/__mocks__/mockPrometheusQueryVectorResponse';
 import type { ProjectKind } from '@odh-dashboard/k8s-core';
 import { appChrome } from '../../../pages/appChrome';
 import { clusterStorage } from '../../../pages/clusterStorage';
@@ -35,7 +35,18 @@ const initIntercepts = ({
   cy.interceptOdh('GET /api/cluster-settings', mockClusterSettings({}));
   cy.interceptOdh('POST /api/prometheus/pvc', {
     code: 200,
-    response: mockPrometheusQueryResponse({}),
+    response: mockPrometheusQueryVectorResponse<{ metric: { __name__: string } }>({
+      result: [
+        {
+          metric: { __name__: 'kubelet_volume_stats_used_bytes' },
+          value: [1704910625, '1073741824'],
+        },
+        {
+          metric: { __name__: 'kubelet_volume_stats_capacity_bytes' },
+          value: [1704910625, '5368709120'],
+        },
+      ],
+    }),
   });
   cy.interceptK8sList(ProjectModel, mockK8sResourceList(projects));
   cy.interceptK8s(ProjectModel, mockProjectK8sResource({}));
