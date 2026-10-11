@@ -126,14 +126,9 @@ const AIModelsTable: React.FC<AIModelsTableProps> = ({
   // Check if any models are custom endpoints to determine if we need the action column
   const hasCustomEndpoints = models.some((model) => model.model_source_type === 'custom_endpoint');
 
-  // Filter columns based on playground availability
-  const visibleColumns = React.useMemo(
-    () =>
-      isChatPlaygroundEnabled
-        ? aiModelColumns
-        : aiModelColumns.filter((col) => col.field !== 'playground'),
-    [isChatPlaygroundEnabled],
-  );
+  // CEAMLS: the Playground column always shows. With OGX it offers the chat
+  // playground; without it, the API playground of this module.
+  const visibleColumns = aiModelColumns;
 
   return (
     <Table
@@ -167,6 +162,7 @@ const AIModelsTable: React.FC<AIModelsTableProps> = ({
           onDelete={onDelete}
           showActionColumn={hasCustomEndpoints && !!onDelete}
           showPlaygroundColumn={isChatPlaygroundEnabled}
+          showApiPlaygroundColumn={!isChatPlaygroundEnabled}
           allCollections={allCollections}
           collectionsLoaded={collectionsLoaded}
           existingCollections={existingCollections}

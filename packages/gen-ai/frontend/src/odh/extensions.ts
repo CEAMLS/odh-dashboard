@@ -8,8 +8,10 @@ import type {
 } from '@odh-dashboard/plugin-core/extension-points';
 import {
   aiAssetsRootPath,
+  apiPlaygroundRootPath,
   chatPlaygroundRootPath,
   globAiAssetsAll,
+  globApiPlaygroundAll,
   globChatPlaygroundAll,
   globGenAiAll,
 } from '~/app/utilities/routes';
@@ -161,12 +163,29 @@ const extensions: (
       required: [PLUGIN_GEN_AI],
     },
     properties: {
+      // CEAMLS: this page lists the model gateway's models, so it is
+      // called "Gateway" here, on the page and on the home page.
       id: 'ai-assets',
-      title: 'AI asset endpoints',
+      title: 'Gateway',
       href: aiAssetsRootPath,
       section: 'gen-ai-studio',
       path: globAiAssetsAll,
       label: 'Tech Preview',
+    },
+  },
+  {
+    // CEAMLS: the API playground needs only the Gen AI BFF (no OGX), so it
+    // is available whenever the Gen AI studio is.
+    type: 'app.navigation/href',
+    flags: {
+      required: [PLUGIN_GEN_AI],
+    },
+    properties: {
+      id: 'api-playground',
+      title: 'Playground',
+      href: apiPlaygroundRootPath,
+      section: 'gen-ai-studio',
+      path: globApiPlaygroundAll,
     },
   },
   {
@@ -191,17 +210,8 @@ const extensions: (
       component: () => import('../app/AIAssets/AIAssetsModelsTab').then((m) => m.default),
     },
   },
-  {
-    type: 'gen-ai.ai-assets/tab',
-    flags: {
-      required: [PLUGIN_GEN_AI],
-    },
-    properties: {
-      id: 'mcpservers',
-      title: 'MCP servers',
-      component: () => import('../app/AIAssets/AIAssetsMCPTab').then((m) => m.default),
-    },
-  },
+  // CEAMLS: the "MCP servers" tab is not registered. The cluster has no MCP
+  // servers and the tab only showed an empty state.
   {
     type: 'gen-ai.ai-assets/tab',
     flags: {
@@ -260,9 +270,22 @@ const extensions: (
     properties: {
       id: 'genai-ai-assets',
       group: 'gen-ai-studio',
-      title: 'Browse available AI assets',
+      title: 'Browse the model gateway',
       destination: { href: aiAssetsRootPath },
       order: '2_ai_assets',
+    },
+  },
+  {
+    type: 'app.task/item',
+    flags: {
+      required: [PLUGIN_GEN_AI],
+    },
+    properties: {
+      id: 'genai-api-playground',
+      group: 'gen-ai-studio',
+      title: 'Try a model in the playground',
+      destination: { href: apiPlaygroundRootPath },
+      order: '3_api_playground',
     },
   },
 ];

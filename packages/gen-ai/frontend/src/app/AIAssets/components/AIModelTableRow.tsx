@@ -33,7 +33,12 @@ import {
   VectorStore,
 } from '~/app/types';
 import ChatbotConfigurationModal from '~/app/Chatbot/components/chatbotConfiguration/ChatbotConfigurationModal';
-import { genAiAiAssetsTabRoute, genAiChatPlaygroundRoute } from '~/app/utilities/routes';
+import {
+  genAiAiAssetsTabRoute,
+  genAiApiPlaygroundRoute,
+  genAiChatPlaygroundRoute,
+} from '~/app/utilities/routes';
+import { isApiPlaygroundModel } from '~/app/ApiPlayground/utils';
 import { isPlaygroundModelMatchForAIModel, isASRModel } from '~/app/utilities/utils';
 import useAiAssetVectorStoresEnabled from '~/app/hooks/useAiAssetVectorStoresEnabled';
 import { GenAiContext } from '~/app/context/GenAiContext';
@@ -48,6 +53,8 @@ type AIModelTableRowProps = {
   onDelete?: (modelId: string) => Promise<void>;
   showActionColumn?: boolean;
   showPlaygroundColumn?: boolean;
+  /** CEAMLS: show the "Open in playground" link to the API playground. */
+  showApiPlaygroundColumn?: boolean;
   allCollections: ExternalVectorStoreSummary[];
   collectionsLoaded: boolean;
   existingCollections: VectorStore[];
@@ -61,6 +68,7 @@ const AIModelTableRow: React.FC<AIModelTableRowProps> = ({
   onDelete,
   showActionColumn = false,
   showPlaygroundColumn = false,
+  showApiPlaygroundColumn = false,
   allCollections,
   collectionsLoaded,
   existingCollections,
@@ -237,6 +245,29 @@ const AIModelTableRow: React.FC<AIModelTableRowProps> = ({
                 Add to playground
               </Button>
             )}
+          </Td>
+        )}
+        {showApiPlaygroundColumn && (
+          <Td dataLabel="Playground">
+            <Button
+              data-testid="open-api-playground-button"
+              variant={ButtonVariant.secondary}
+              onClick={() => {
+                fireMiscTrackingEvent('Available Endpoints Playground Launched', {
+                  assetType,
+                  assetId: model.model_id,
+                });
+                navigate(genAiApiPlaygroundRoute(namespace?.name), {
+                  state: {
+                    model: model.model_id,
+                    modelSourceType: model.model_source_type,
+                  },
+                });
+              }}
+              isDisabled={!isApiPlaygroundModel(model)}
+            >
+              Open in playground
+            </Button>
           </Td>
         )}
         {showActionColumn && (

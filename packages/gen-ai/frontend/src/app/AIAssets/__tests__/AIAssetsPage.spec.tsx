@@ -62,7 +62,7 @@ describe('AIAssetsPage', () => {
 
     expect(screen.getByTestId('applications-page')).toBeInTheDocument();
     expect(screen.getByTestId('description')).toHaveTextContent(
-      'Browse endpoints for models and MCP servers that are available as AI assets.',
+      'Browse the models that the model gateway serves to this project',
     );
   });
 

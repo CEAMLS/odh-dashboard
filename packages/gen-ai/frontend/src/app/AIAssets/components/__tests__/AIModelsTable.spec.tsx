@@ -138,7 +138,8 @@ describe('AIModelsTable', () => {
       expect(screen.getByText('Playground')).toBeInTheDocument();
     });
 
-    it('should exclude Playground column when useChatPlaygroundEnabled returns false', () => {
+    // CEAMLS: without the chat playground the column offers the API playground.
+    it('should offer the API playground when useChatPlaygroundEnabled returns false', () => {
       mockUseChatPlaygroundEnabled.mockReturnValue(false);
       const models = [createMockAIModel({ model_id: 'model-1', display_name: 'Model 1' })];
 
@@ -155,7 +156,9 @@ describe('AIModelsTable', () => {
         </TestWrapper>,
       );
 
-      expect(screen.queryByText('Playground')).not.toBeInTheDocument();
+      expect(screen.getByText('Playground')).toBeInTheDocument();
+      expect(screen.getByTestId('open-api-playground-button')).toBeInTheDocument();
+      expect(screen.queryByTestId('try-playground-button')).not.toBeInTheDocument();
     });
   });
 });

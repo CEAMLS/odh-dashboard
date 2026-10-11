@@ -12,7 +12,7 @@ class AIAssetsPage {
   private waitForPageLoad(): void {
     cy.findByTestId('page-title', { timeout: 15000 })
       .should('be.visible')
-      .should('contain.text', 'AI asset endpoints');
+      .should('contain.text', 'Gateway');
     cy.findAllByRole('tab', { timeout: 10000 }).should('have.length.at.least', 1);
   }
 

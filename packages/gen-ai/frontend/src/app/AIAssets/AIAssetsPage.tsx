@@ -34,12 +34,12 @@ export const AIAssetsPage: React.FC = () => {
     <ApplicationsPage
       title={
         <GenAiCoreHeader
-          title="AI asset endpoints"
+          title="Gateway"
           getRedirectPath={genAiAiAssetsRoute}
           icon={AiAssetEndpointsIcon}
         />
       }
-      description="Browse endpoints for models and MCP servers that are available as AI assets."
+      description="Browse the models that the model gateway serves to this project, with their endpoints and API keys. Open a model in the playground to try it."
       loaded
       empty={false}
     >

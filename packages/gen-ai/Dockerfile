@@ -30,7 +30,8 @@ ENV DEPLOYMENT_MODE=standalone
 RUN npm run build:prod
 
 # Backend build stage
-FROM registry.redhat.io/ubi9/go-toolset:1.26 AS bff-builder
+# CEAMLS: the public mirror of the same image; GitHub Actions has no registry.redhat.io login.
+FROM registry.access.redhat.com/ubi9/go-toolset:1.26 AS bff-builder
 WORKDIR /usr/src/app
 COPY packages/gen-ai/bff/go.mod packages/gen-ai/bff/go.sum ./
 COPY pkg/tls/go.mod pkg/tls/go.sum /pkg/tls/
