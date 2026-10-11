@@ -8,17 +8,15 @@ COPY package.json package-lock.json* ./
 # Copy frontend workspace manifests (for @odh-dashboard/internal)
 COPY frontend/package.json ./frontend/
 COPY frontend/src/package.json ./frontend/src/
-# Copy required workspace packages
-COPY packages/plugin-core/ ./packages/plugin-core/
-COPY packages/app-config/ ./packages/app-config/
-COPY packages/tsconfig/ ./packages/tsconfig/
+# CEAMLS: copy every workspace package. @odh-dashboard/internal (frontend/src)
+# imports ui-core, k8s-core, foundation, analytics and, through those,
+# model-serving, hardware-profiles, trustyai and connection-types; the
+# short list this file used to carry broke the build with "Module not
+# found: @odh-dashboard/ui-core/..." (CI run 38132007221, 2026-10-11).
+COPY packages/ ./packages/
+COPY scripts/ ./scripts/
 # Copy frontend source (for @odh-dashboard/internal exports)
 COPY frontend/src/ ./frontend/src/
-# Copy gen-ai module package.json
-COPY packages/gen-ai/package.json ./packages/gen-ai/
-COPY packages/gen-ai/frontend/package*.json ./packages/gen-ai/frontend/
-# Copy gen-ai module source code
-COPY packages/gen-ai/frontend/ ./packages/gen-ai/frontend/
 RUN chown -R default:root /usr/src/workspace && chmod -R g+w /usr/src/workspace
 USER default
 # Install workspace dependencies at root level
