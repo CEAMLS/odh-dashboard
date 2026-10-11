@@ -54,4 +54,7 @@ ENV OAUTH_ENABLED=false \
 
 USER 1001
 EXPOSE 8080
-CMD ["/bff"] 
+# CEAMLS: ENTRYPOINT, not CMD. The dashboard operator runs deploy/gen-ai-ui
+# with args only (--auth-method=... --port=8143 ...), and args replace a CMD.
+# Dockerfile.workspace, which the stock image comes from, uses ENTRYPOINT too.
+ENTRYPOINT ["/bff"]
