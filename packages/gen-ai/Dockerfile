@@ -14,7 +14,6 @@ COPY frontend/src/package.json ./frontend/src/
 # short list this file used to carry broke the build with "Module not
 # found: @odh-dashboard/ui-core/..." (CI run 38132007221, 2026-10-11).
 COPY packages/ ./packages/
-COPY scripts/ ./scripts/
 # Copy frontend source (for @odh-dashboard/internal exports)
 COPY frontend/src/ ./frontend/src/
 RUN chown -R default:root /usr/src/workspace && chmod -R g+w /usr/src/workspace
