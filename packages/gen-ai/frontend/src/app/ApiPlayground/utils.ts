@@ -57,16 +57,46 @@ export const servedModelName = (model: Pick<AIModel, 'model_id' | 'model_source_
   return model.model_id;
 };
 
-/** The base URL for a direct call from outside the cluster, with /v1. */
+/**
+ * The path of a gateway model under the gateway address: "<namespace>/<name>",
+ * from the MaaS catalog id "publishers/<namespace>/models/<name>". The
+ * gateway routes a model at /<namespace>/<name>/v1; its root /v1 answers only
+ * with an X-Gateway-Model-Name header. Undefined for anything else.
+ */
+export const gatewayModelPath = (
+  model: Pick<AIModel, 'model_id' | 'model_source_type'>,
+): string | undefined => {
+  if (model.model_source_type !== 'maas') {
+    return undefined;
+  }
+  const parts = model.model_id.split('/');
+  if (parts.length === 4 && parts[0] === 'publishers' && parts[2] === 'models') {
+    return `${parts[1]}/${parts[3]}`;
+  }
+  return undefined;
+};
+
+/**
+ * The base URL for a direct call from outside the cluster, with /v1. A
+ * gateway model gets its own path under the gateway address, because the
+ * address alone (what the MaaS API reports) is not callable.
+ */
 export const directBaseUrl = (
-  model: Pick<AIModel, 'externalEndpoint' | 'internalEndpoint'>,
+  model: Pick<AIModel, 'externalEndpoint' | 'internalEndpoint' | 'model_id' | 'model_source_type'>,
 ): string | undefined => {
   const url = model.externalEndpoint || model.internalEndpoint;
   if (!url) {
     return undefined;
   }
-  const trimmed = url.replace(/\/+$/, '');
-  return trimmed.endsWith('/v1') ? trimmed : `${trimmed}/v1`;
+  let trimmed = url.replace(/\/+$/, '');
+  if (trimmed.endsWith('/v1')) {
+    trimmed = trimmed.slice(0, -'/v1'.length);
+  }
+  const path = gatewayModelPath(model);
+  if (path && !trimmed.endsWith(`/${path}`)) {
+    trimmed = `${trimmed}/${path}`;
+  }
+  return `${trimmed}/v1`;
 };
 
 export const buildRequestBody = (

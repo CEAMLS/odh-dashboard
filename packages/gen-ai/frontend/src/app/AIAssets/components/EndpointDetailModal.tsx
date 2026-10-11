@@ -40,6 +40,7 @@ import { AIModel, SubscriptionInfo } from '~/app/types';
 import useGenerateMaaSToken from '~/app/hooks/useGenerateMaaSToken';
 import { copyToClipboardWithTracking } from '~/app/utilities/utils';
 import { maasTokensPath } from '~/app/utilities/routes';
+import { directBaseUrl } from '~/app/ApiPlayground/utils';
 
 type EndpointDetailModalProps = {
   model: AIModel;
@@ -50,6 +51,11 @@ const EndpointDetailModal: React.FC<EndpointDetailModalProps> = ({ model, onClos
   const hasExternal = !!model.externalEndpoint;
   const hasInternal = !!model.internalEndpoint;
   const isMaaS = model.model_source_type === 'maas';
+  // CEAMLS: the MaaS API reports the gateway address alone, which is not
+  // callable. Show the model's own base URL (address + /<namespace>/<name>/v1).
+  const externalUrl = isMaaS
+    ? (directBaseUrl(model) ?? model.externalEndpoint ?? '')
+    : (model.externalEndpoint ?? '');
 
   const { isGenerating, tokenData, error, generateToken, resetToken } = useGenerateMaaSToken();
 
@@ -175,9 +181,9 @@ const EndpointDetailModal: React.FC<EndpointDetailModalProps> = ({ model, onClos
                     hoverTip="Copy URL"
                     clickTip="Copied"
                     aria-label={`External API endpoint URL for ${model.model_name}`}
-                    onCopy={() => handleEndpointCopy(model.externalEndpoint ?? '', 'external')}
+                    onCopy={() => handleEndpointCopy(externalUrl, 'external')}
                   >
-                    {model.externalEndpoint ?? ''}
+                    {externalUrl}
                   </ClipboardCopy>
                 </FlexItem>
                 <FlexItem>
@@ -185,7 +191,9 @@ const EndpointDetailModal: React.FC<EndpointDetailModalProps> = ({ model, onClos
                     component={ContentVariants.small}
                     style={{ color: 'var(--pf-t--global--text--color--subtle)' }}
                   >
-                    Use this endpoint to access the model from outside the cluster.
+                    {isMaaS
+                      ? 'The base URL for an OpenAI client, with an API key as the bearer token. It works from inside and outside the cluster.'
+                      : 'Use this endpoint to access the model from outside the cluster.'}
                   </Content>
                 </FlexItem>
               </Flex>

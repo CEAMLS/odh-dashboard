@@ -4,6 +4,7 @@ import {
   buildRequestBody,
   directBaseUrl,
   errorMessageFromBody,
+  gatewayModelPath,
   isApiPlaygroundModel,
   parseDeltaText,
   parseMessageText,
@@ -54,8 +55,28 @@ describe('API playground utils', () => {
 
   it('adds /v1 to a base URL once', () => {
     expect(directBaseUrl(baseModel)).toBe(baseModel.externalEndpoint);
-    expect(directBaseUrl({ externalEndpoint: 'https://x.example/' })).toBe('https://x.example/v1');
-    expect(directBaseUrl({})).toBeUndefined();
+    expect(
+      directBaseUrl({
+        externalEndpoint: 'https://x.example/',
+        model_id: 'my-model',
+        model_source_type: 'namespace',
+      }),
+    ).toBe('https://x.example/v1');
+    expect(directBaseUrl({ model_id: 'my-model', model_source_type: 'namespace' })).toBeUndefined();
+  });
+
+  it('puts a gateway model under its own path on the gateway address', () => {
+    expect(gatewayModelPath(baseModel)).toBe('ceamls-models/gemma-4-31b-it');
+    expect(
+      gatewayModelPath({ model_id: 'my-model', model_source_type: 'namespace' }),
+    ).toBeUndefined();
+    // What the MaaS API reports: the gateway address alone.
+    expect(directBaseUrl({ ...baseModel, externalEndpoint: 'https://maas.apps.example.edu' })).toBe(
+      'https://maas.apps.example.edu/ceamls-models/gemma-4-31b-it/v1',
+    );
+    expect(
+      directBaseUrl({ ...baseModel, externalEndpoint: 'https://maas.apps.example.edu/v1' }),
+    ).toBe('https://maas.apps.example.edu/ceamls-models/gemma-4-31b-it/v1');
   });
 
   it('builds the request body with the system prompt first', () => {
