@@ -21,9 +21,10 @@ export const useDocResources = (): { docs: OdhDocument[]; loaded: boolean; loadE
 
     const docs = [...odhDocs];
 
-    // Add doc cards for all components' documentation
+    // Add doc cards for all components' documentation. A hidden tile
+    // (spec.hidden, as on the Explore and Enabled pages) gets no card.
     components.forEach((component) => {
-      if (component.spec.docsLink) {
+      if (component.spec.docsLink && !component.spec.hidden) {
         const odhDoc: OdhDocument = {
           kind: 'OdhDocLink',
           metadata: {
