@@ -4,6 +4,7 @@ import type { Extension } from '@openshift/dynamic-plugin-sdk';
 import { allSettledPromises } from '#~/utilities/allSettledPromises';
 import { MF_REMOTES } from '#~/utilities/const';
 import pluginExtensions from './plugin-extensions';
+import { applyCeamlsRemoteOverrides } from './ceamlsRemoteOverrides';
 
 type MFConfig = {
   name: string;
@@ -69,7 +70,7 @@ export const useAppExtensions = (): [Record<string, Extension[]>, boolean] => {
   }, []);
 
   const allExtensions = React.useMemo(
-    () => ({ ...pluginExtensions, ...appExtensions }),
+    () => ({ ...pluginExtensions, ...applyCeamlsRemoteOverrides(appExtensions) }),
     [appExtensions],
   );
 

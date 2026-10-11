@@ -86,11 +86,15 @@ describe('CEAMLS project-scoped pages', () => {
       .invoke('text')
       .then((text) => {
         const workbenches = text.indexOf('Workbenches');
+        const models = text.indexOf('Models');
         const storage = text.indexOf('Storage');
         const projects = text.indexOf('Projects');
         expect(workbenches).to.be.greaterThan(-1);
-        expect(workbenches).to.be.lessThan(storage);
+        expect(workbenches).to.be.lessThan(models);
+        expect(models).to.be.lessThan(storage);
         expect(storage).to.be.lessThan(projects);
+        // Models is a top-level item; the "AI hub" section is not shown.
+        expect(text).to.not.contain('AI hub');
       });
   });
 

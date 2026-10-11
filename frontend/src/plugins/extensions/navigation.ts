@@ -56,8 +56,11 @@ const extensions: (NavExtension | TabRoutePageExtension)[] = [
       title: 'Models',
       href: '/ai-hub/models',
       path: '/ai-hub/models/*',
-      group: '2_models',
-      section: 'ai-hub',
+      // CEAMLS: Models is a top-level item, not a child of "AI hub"
+      // (upstream: group '2_models', section 'ai-hub'). The section stays
+      // for MCP servers and Agents, which are off here.
+      group: '3_ai_hub',
+      iconRef: () => import('#~/images/icons/AiHubNavIcon'),
       objectType: 'registered-models',
     },
   },
