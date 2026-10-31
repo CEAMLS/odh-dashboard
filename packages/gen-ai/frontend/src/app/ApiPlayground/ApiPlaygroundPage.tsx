@@ -21,8 +21,11 @@ import PlaygroundCodeModal from './components/PlaygroundCodeModal';
 
 const DEFAULT_SETTINGS: PlaygroundSettingsValues = {
   temperature: 0.7,
-  maxTokens: 1024,
+  // 4096 leaves room for a thinking model: its thinking tokens count against
+  // this cap, and a cap that the thinking alone fills gives an empty answer.
+  maxTokens: 4096,
   stream: true,
+  reasoningEffort: 'default',
 };
 
 type RouteState = { model?: unknown; modelSourceType?: unknown };

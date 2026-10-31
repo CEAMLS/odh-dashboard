@@ -101,6 +101,22 @@ describe('API playground utils', () => {
     expect(plain.messages).toHaveLength(1);
   });
 
+  it('sends reasoning_effort only when it is not the model default', () => {
+    const settings = { temperature: 0.5, maxTokens: 10, stream: false };
+    const noField = buildRequestBody('m', '', [{ role: 'user', content: 'hi' }], settings);
+    expect('reasoning_effort' in noField).toBe(false);
+    const asDefault = buildRequestBody('m', '', [{ role: 'user', content: 'hi' }], {
+      ...settings,
+      reasoningEffort: 'default',
+    });
+    expect('reasoning_effort' in asDefault).toBe(false);
+    const high = buildRequestBody('m', '', [{ role: 'user', content: 'hi' }], {
+      ...settings,
+      reasoningEffort: 'high',
+    });
+    expect(high.reasoning_effort).toBe('high');
+  });
+
   it('parses server-sent event lines', () => {
     expect(parseSseLine('')).toBeNull();
     expect(parseSseLine(': keep-alive')).toBeNull();

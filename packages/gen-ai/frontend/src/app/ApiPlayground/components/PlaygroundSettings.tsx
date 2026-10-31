@@ -8,22 +8,34 @@ import {
   Content,
   Form,
   FormGroup,
+  FormHelperText,
   FormSelect,
   FormSelectOption,
   FormSelectOptionGroup,
+  HelperText,
+  HelperTextItem,
   Label,
   Switch,
 } from '@patternfly/react-core';
 import { CodeIcon, KeyIcon } from '@patternfly/react-icons';
 import { AIModel } from '~/app/types';
 import ModelParameterFormGroup from '~/app/Chatbot/components/ModelParameterFormGroup';
-import { PlaygroundSourceLabel, sourceLabel } from '~/app/ApiPlayground/utils';
+import {
+  PlaygroundReasoningEffort,
+  PlaygroundSourceLabel,
+  REASONING_EFFORT_OPTIONS,
+  sourceLabel,
+} from '~/app/ApiPlayground/utils';
 
 export type PlaygroundSettingsValues = {
   temperature: number;
   maxTokens: number;
   stream: boolean;
+  reasoningEffort: PlaygroundReasoningEffort;
 };
+
+const isReasoningEffort = (value: string): value is PlaygroundReasoningEffort =>
+  REASONING_EFFORT_OPTIONS.some((o) => o.value === value);
 
 type PlaygroundSettingsProps = {
   models: AIModel[];
@@ -139,6 +151,31 @@ const PlaygroundSettings: React.FC<PlaygroundSettingsProps> = ({
             step={1}
             isDisabled={isBusy}
           />
+          <FormGroup label="Reasoning effort" fieldId="api-playground-reasoning-effort">
+            <FormSelect
+              id="api-playground-reasoning-effort"
+              data-testid="api-playground-reasoning-effort"
+              value={settings.reasoningEffort}
+              onChange={(_e, value) =>
+                isReasoningEffort(value) &&
+                onChangeSettings({ ...settings, reasoningEffort: value })
+              }
+              isDisabled={isBusy}
+              aria-label="Reasoning effort"
+            >
+              {REASONING_EFFORT_OPTIONS.map((o) => (
+                <FormSelectOption key={o.value} value={o.value} label={o.label} />
+              ))}
+            </FormSelect>
+            <FormHelperText>
+              <HelperText>
+                <HelperTextItem>
+                  How long a thinking model deliberates before it answers. Thinking tokens count
+                  against Max tokens. Models without a thinking mode ignore this.
+                </HelperTextItem>
+              </HelperText>
+            </FormHelperText>
+          </FormGroup>
           <FormGroup fieldId="api-playground-stream">
             <Switch
               id="api-playground-stream"

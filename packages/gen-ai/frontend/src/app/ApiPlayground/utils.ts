@@ -15,11 +15,28 @@ export type PlaygroundUsage = {
   totalTokens: number;
 };
 
+/**
+ * How long the model thinks before it answers. 'default' sends nothing, so
+ * the server default applies (GLM-5.3 on the gateway runs at low). The
+ * values are what the GLM-5.3 chat template reads from the OpenAI field
+ * reasoning_effort: low, high, or max. A model with no thinking mode
+ * ignores the field.
+ */
+export type PlaygroundReasoningEffort = 'default' | 'low' | 'high' | 'max';
+
+export const REASONING_EFFORT_OPTIONS: { value: PlaygroundReasoningEffort; label: string }[] = [
+  { value: 'default', label: 'Model default' },
+  { value: 'low', label: 'Low' },
+  { value: 'high', label: 'High' },
+  { value: 'max', label: 'Max' },
+];
+
 export type PlaygroundRequestBody = {
   model: string;
   messages: PlaygroundChatMessage[];
   temperature: number;
   max_tokens: number;
+  reasoning_effort?: Exclude<PlaygroundReasoningEffort, 'default'>;
   stream?: boolean;
   stream_options?: { include_usage: boolean };
 };
@@ -103,7 +120,12 @@ export const buildRequestBody = (
   model: string,
   systemPrompt: string,
   history: PlaygroundChatMessage[],
-  settings: { temperature: number; maxTokens: number; stream: boolean },
+  settings: {
+    temperature: number;
+    maxTokens: number;
+    stream: boolean;
+    reasoningEffort?: PlaygroundReasoningEffort;
+  },
 ): PlaygroundRequestBody => {
   const messages: PlaygroundChatMessage[] = [];
   const system = systemPrompt.trim();
@@ -122,6 +144,10 @@ export const buildRequestBody = (
     /* eslint-disable-next-line camelcase */
     max_tokens: settings.maxTokens,
   };
+  if (settings.reasoningEffort && settings.reasoningEffort !== 'default') {
+    /* eslint-disable-next-line camelcase */
+    body.reasoning_effort = settings.reasoningEffort;
+  }
   if (settings.stream) {
     body.stream = true;
     /* eslint-disable-next-line camelcase */
