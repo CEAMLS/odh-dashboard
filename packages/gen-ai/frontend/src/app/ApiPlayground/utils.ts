@@ -28,7 +28,7 @@ export const REASONING_EFFORT_OPTIONS: { value: PlaygroundReasoningEffort; label
   { value: 'default', label: 'Model default' },
   { value: 'low', label: 'Low' },
   { value: 'high', label: 'High' },
-  { value: 'max', label: 'Max' },
+  { value: 'max', label: 'Max (can run for minutes)' },
 ];
 
 export type PlaygroundRequestBody = {

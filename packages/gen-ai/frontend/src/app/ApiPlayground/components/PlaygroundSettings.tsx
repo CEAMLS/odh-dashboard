@@ -173,7 +173,8 @@ const PlaygroundSettings: React.FC<PlaygroundSettingsProps> = ({
               <HelperText>
                 <HelperTextItem>
                   How long a thinking model deliberates before it answers. Thinking tokens count
-                  against Max tokens. Models without a thinking mode ignore this.
+                  against Max tokens. At Max the model can think for many minutes and may never
+                  finish; the timeout stops it. Models without a thinking mode ignore this.
                 </HelperTextItem>
               </HelperText>
             </FormHelperText>
