@@ -147,7 +147,12 @@ func main() {
 		Handler:      app.Routes(),
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  8 * time.Minute, // Allow larger file uploads (up to 10MB)
-		WriteTimeout: 8 * time.Minute, // Allow longer processing time for large PDFs
+		// CEAMLS: 60 minutes, not 8. WriteTimeout also bounds a streamed chat
+		// answer from the genai-proxy handler. A thinking model with a high
+		// max_tokens can stream for longer than 8 minutes, and the cut showed
+		// in the playground as a network error. The playground has its own
+		// timeout setting, so the user decides how long to wait.
+		WriteTimeout: 60 * time.Minute,
 		ErrorLog:     slog.NewLogLogger(logger.Handler(), slog.LevelError),
 	}
 

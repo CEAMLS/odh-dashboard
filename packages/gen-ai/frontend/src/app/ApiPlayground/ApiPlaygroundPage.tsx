@@ -14,7 +14,12 @@ import useFetchAIModels from '~/app/hooks/useFetchAIModels';
 import { genAiAiAssetsRoute, genAiApiPlaygroundRoute, maasKeysPath } from '~/app/utilities/routes';
 import { sendPlaygroundChat } from '~/app/services/apiPlaygroundService';
 import { AIModel } from '~/app/types';
-import { PlaygroundChatMessage, buildRequestBody, isApiPlaygroundModel } from './utils';
+import {
+  PlaygroundChatMessage,
+  buildRequestBody,
+  describeSendError,
+  isApiPlaygroundModel,
+} from './utils';
 import PlaygroundConversation, { PlaygroundTurn } from './components/PlaygroundConversation';
 import PlaygroundSettings, { PlaygroundSettingsValues } from './components/PlaygroundSettings';
 import PlaygroundCodeModal from './components/PlaygroundCodeModal';
@@ -26,6 +31,8 @@ const DEFAULT_SETTINGS: PlaygroundSettingsValues = {
   maxTokens: 4096,
   stream: true,
   reasoningEffort: 'default',
+  // 15 minutes: 32768 tokens from GLM-5.3 on the gateway take about 12.
+  timeoutSeconds: 900,
 };
 
 type RouteState = { model?: unknown; modelSourceType?: unknown };
@@ -106,6 +113,10 @@ const ApiPlaygroundPage: React.FC = () => {
     setIsBusy(true);
     const controller = new AbortController();
     abortRef.current = controller;
+    const timer = window.setTimeout(
+      () => controller.abort(new DOMException('The request timed out.', 'TimeoutError')),
+      settings.timeoutSeconds * 1000,
+    );
     fireMiscTrackingEvent('API Playground Message Sent', {
       modelSourceType: selectedModel.model_source_type,
       stream: settings.stream,
@@ -129,12 +140,12 @@ const ApiPlaygroundPage: React.FC = () => {
         pending: false,
       });
     } catch (e) {
-      const aborted = e instanceof DOMException && e.name === 'AbortError';
       updateTurn(replyId, {
         pending: false,
-        error: aborted ? 'Stopped.' : e instanceof Error ? e.message : 'The request failed.',
+        error: describeSendError(e, settings.timeoutSeconds),
       });
     } finally {
+      window.clearTimeout(timer);
       abortRef.current = null;
       setIsBusy(false);
     }

@@ -32,6 +32,8 @@ export type PlaygroundSettingsValues = {
   maxTokens: number;
   stream: boolean;
   reasoningEffort: PlaygroundReasoningEffort;
+  /** How long the page waits for the answer before it stops the request. */
+  timeoutSeconds: number;
 };
 
 const isReasoningEffort = (value: string): value is PlaygroundReasoningEffort =>
@@ -176,6 +178,19 @@ const PlaygroundSettings: React.FC<PlaygroundSettingsProps> = ({
               </HelperText>
             </FormHelperText>
           </FormGroup>
+          <ModelParameterFormGroup
+            fieldId="api-playground-timeout"
+            label="Timeout (seconds)"
+            helpText="The page stops waiting for the answer after this long. A thinking model at a high Max tokens can take several minutes."
+            value={settings.timeoutSeconds}
+            onChange={(value) =>
+              onChangeSettings({ ...settings, timeoutSeconds: Math.round(value) })
+            }
+            min={10}
+            max={3600}
+            step={10}
+            isDisabled={isBusy}
+          />
           <FormGroup fieldId="api-playground-stream">
             <Switch
               id="api-playground-stream"

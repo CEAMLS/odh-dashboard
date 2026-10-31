@@ -156,6 +156,20 @@ export const buildRequestBody = (
   return body;
 };
 
+/** The message under a failed turn. Stop, timeout and a cut connection each get their own. */
+export const describeSendError = (e: unknown, timeoutSeconds: number): string => {
+  if (e instanceof DOMException && e.name === 'AbortError') {
+    return 'Stopped.';
+  }
+  if (e instanceof DOMException && e.name === 'TimeoutError') {
+    return `No answer after ${timeoutSeconds} seconds. Raise the timeout, lower Max tokens, or pick a lower reasoning effort.`;
+  }
+  if (e instanceof TypeError) {
+    return `The connection dropped before the answer finished (${e.message}).`;
+  }
+  return e instanceof Error ? e.message : 'The request failed.';
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 

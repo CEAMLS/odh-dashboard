@@ -2,6 +2,7 @@
 import { AIModel } from '~/app/types';
 import {
   buildRequestBody,
+  describeSendError,
   directBaseUrl,
   errorMessageFromBody,
   gatewayModelPath,
@@ -115,6 +116,18 @@ describe('API playground utils', () => {
       reasoningEffort: 'high',
     });
     expect(high.reasoning_effort).toBe('high');
+  });
+
+  it('describes a stop, a timeout, a cut connection and other errors', () => {
+    expect(describeSendError(new DOMException('x', 'AbortError'), 60)).toBe('Stopped.');
+    expect(describeSendError(new DOMException('x', 'TimeoutError'), 60)).toContain(
+      'No answer after 60 seconds',
+    );
+    expect(describeSendError(new TypeError('network error'), 60)).toBe(
+      'The connection dropped before the answer finished (network error).',
+    );
+    expect(describeSendError(new Error('HTTP 500: boom'), 60)).toBe('HTTP 500: boom');
+    expect(describeSendError('odd', 60)).toBe('The request failed.');
   });
 
   it('parses server-sent event lines', () => {
