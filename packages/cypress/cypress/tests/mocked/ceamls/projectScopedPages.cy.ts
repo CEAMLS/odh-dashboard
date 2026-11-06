@@ -77,7 +77,7 @@ const visitPage = (path: string) => {
 const findBreadcrumb = () => cy.findByRole('navigation', { name: 'Breadcrumb' });
 
 describe('CEAMLS project-scoped pages', () => {
-  it('orders Workbenches, Storage and Projects in the sidebar', () => {
+  it('orders Projects, Workbenches, Models and Storage in the sidebar, with no Home', () => {
     initIntercepts({});
     appChrome.visit();
 
@@ -85,17 +85,25 @@ describe('CEAMLS project-scoped pages', () => {
       .findSideBar()
       .invoke('text')
       .then((text) => {
+        const projects = text.indexOf('Projects');
         const workbenches = text.indexOf('Workbenches');
         const models = text.indexOf('Models');
         const storage = text.indexOf('Storage');
-        const projects = text.indexOf('Projects');
-        expect(workbenches).to.be.greaterThan(-1);
+        expect(projects).to.be.greaterThan(-1);
+        expect(projects).to.be.lessThan(workbenches);
         expect(workbenches).to.be.lessThan(models);
         expect(models).to.be.lessThan(storage);
-        expect(storage).to.be.lessThan(projects);
         // Models is a top-level item; the "AI hub" section is not shown.
         expect(text).to.not.contain('AI hub');
+        expect(text).to.not.contain('Home');
       });
+  });
+
+  it('lands on Projects', () => {
+    initIntercepts({});
+    appChrome.visit();
+
+    verifyRelativeURL('/projects');
   });
 
   it('opens Workbenches from the sidebar on the first project', () => {

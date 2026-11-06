@@ -11,13 +11,13 @@ const createRedirectComponent = (args: { from: string; to: string }) => () =>
 const ADMIN_USER = 'ADMIN_USER';
 
 const extensions: RouteExtension[] = [
+  // CEAMLS: the landing page is Projects, not Home (upstream: '/' renders
+  // pages/home/Home, or Enabled applications when Home is off). The sidebar
+  // has no Home entry (navigation.ts).
   {
     type: 'app.route',
-    flags: {
-      required: [SupportedArea.HOME],
-    },
     properties: {
-      component: () => import('#~/pages/home/Home'),
+      component: createRedirectComponent({ from: '/', to: '/projects' }),
       path: '/',
     },
   },
@@ -39,16 +39,6 @@ const extensions: RouteExtension[] = [
     properties: {
       path: '/enabled',
       component: createRedirectComponent({ from: '/enabled', to: '/applications/enabled' }),
-    },
-  },
-  {
-    type: 'app.route',
-    flags: {
-      disallowed: [SupportedArea.HOME],
-    },
-    properties: {
-      component: () => import('#~/pages/enabledApplications/EnabledApplications'),
-      path: '/',
     },
   },
   {

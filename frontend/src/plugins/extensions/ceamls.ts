@@ -3,9 +3,10 @@ import { SupportedArea } from '@odh-dashboard/plugin-core/areas';
 
 // CEAMLS: top-level, project-scoped Workbenches and Storage pages. Kept apart
 // from navigation.ts/routes.ts so a rebase onto upstream only has to carry the
-// one group changed there (Projects). Top-level order, by group, on 3.6:
-//   1 Home, 2 Workbenches, 3 AI hub, 5 Develop & train, 6 Observe & monitor,
-//   6_x Storage, 6_y Projects, 7 Learning resources, 8 Applications, 8 Settings
+// one group changed there (Projects, which is also the landing page; there is
+// no Home entry). Top-level order, by group, on 3.6:
+//   1 Projects, 2 Workbenches, 3 AI hub, 5 Develop & train, 6 Observe & monitor,
+//   6_x Storage, 7 Learning resources, 8 Applications, 8 Settings
 const extensions: (NavExtension | RouteExtension)[] = [
   {
     type: 'app.navigation/href',

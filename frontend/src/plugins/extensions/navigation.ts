@@ -9,20 +9,8 @@ import { SupportedArea } from '@odh-dashboard/plugin-core/areas';
 const ADMIN_USER = 'ADMIN_USER';
 
 const extensions: (NavExtension | TabRoutePageExtension)[] = [
-  {
-    type: 'app.navigation/href',
-    flags: {
-      required: [SupportedArea.HOME],
-    },
-    properties: {
-      id: 'home',
-      title: 'Home',
-      href: '/',
-      group: '1_home',
-      iconRef: () => import('#~/images/icons/HomeNavIcon'),
-    },
-  },
-
+  // CEAMLS: no Home entry (upstream: id 'home', group '1_home'). Projects is
+  // the first item and the landing page; routes.ts sends '/' to '/projects'.
   {
     type: 'app.navigation/href',
     flags: {
@@ -33,9 +21,9 @@ const extensions: (NavExtension | TabRoutePageExtension)[] = [
       title: 'Projects',
       href: '/projects',
       path: '/projects/*',
-      // CEAMLS: Projects sits after Storage, near the end of the work items
-      // (upstream: '2_projects'). The other CEAMLS entries are in ceamls.ts.
-      group: '6_y_projects',
+      // CEAMLS: Projects is the top item (upstream: '2_projects', after
+      // Home). The other CEAMLS entries are in ceamls.ts.
+      group: '1_projects',
       iconRef: () => import('#~/images/icons/ProjectsNavIcon'),
     },
   },
