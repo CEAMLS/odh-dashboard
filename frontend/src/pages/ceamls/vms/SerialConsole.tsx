@@ -2,6 +2,7 @@
 // KubeVirt console subresource, through the hub's websocket proxy. Connects
 // on request, not on page load.
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { Alert, Button, Content, Flex, FlexItem } from '@patternfly/react-core';
 import { ExpandIcon } from '@patternfly/react-icons';
 import { Terminal } from '@xterm/xterm';
@@ -27,6 +28,7 @@ const SerialConsole: React.FC<Props> = ({ ns, name, running, starting = false, u
   const fit = React.useRef<FitAddon | null>(null);
   const socket = React.useRef<WebSocket | null>(null);
   const frame = React.useRef<HTMLDivElement>(null);
+  const overlay = React.useRef<HTMLDivElement>(null);
   const [phase, setPhase] = React.useState<Phase>('idle');
   const [note, setNote] = React.useState<string | undefined>(undefined);
   const [full, setFull] = React.useState(false);
@@ -135,8 +137,21 @@ const SerialConsole: React.FC<Props> = ({ ns, name, running, starting = false, u
       return;
     }
     setFull(true);
-    frame.current?.requestFullscreen().catch(() => undefined);
+    // The layer exists after the render; ask for the browser's own mode then.
+    setTimeout(() => frame.current?.requestFullscreen().catch(() => undefined), 0);
   };
+
+  // In full screen the terminal's own element moves into a layer on the
+  // document body, above the hub's masthead and sidebar, and back after.
+  // React does not manage that element, so the move is safe.
+  React.useLayoutEffect(() => {
+    const el = term.current?.element;
+    const target = full ? overlay.current : holder.current;
+    if (el && target && el.parentElement !== target) {
+      target.appendChild(el);
+      fit.current?.fit();
+    }
+  }, [full]);
 
   React.useEffect(() => {
     if (!full) {
@@ -152,11 +167,14 @@ const SerialConsole: React.FC<Props> = ({ ns, name, running, starting = false, u
         leaveFull();
       }
     };
+    const onResize = () => fit.current?.fit();
     document.addEventListener('fullscreenchange', onChange);
     document.addEventListener('keydown', onKey);
+    window.addEventListener('resize', onResize);
     return () => {
       document.removeEventListener('fullscreenchange', onChange);
       document.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', onResize);
     };
   }, [full, leaveFull]);
 
@@ -223,53 +241,54 @@ const SerialConsole: React.FC<Props> = ({ ns, name, running, starting = false, u
       )}
       <FlexItem>
         <div
-          ref={frame}
-          style={
-            full
-              ? {
-                  position: 'fixed',
-                  inset: 0,
-                  zIndex: 10000,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  height: '100vh',
-                  background: '#061a3a',
-                }
-              : undefined
-          }
-        >
-          <div
-            ref={holder}
-            data-testid="ceamls-console"
-            style={{
-              flex: full ? 1 : undefined,
-              minHeight: 0,
-              height: full ? undefined : live ? 420 : 0,
-              overflow: 'hidden',
-              borderRadius: full ? 0 : 6,
-              background: '#061a3a',
-              padding: live ? 8 : 0,
-            }}
-          />
-          {full && (
+          ref={holder}
+          data-testid="ceamls-console"
+          style={{
+            height: live ? 420 : 0,
+            overflow: 'hidden',
+            borderRadius: 6,
+            background: '#061a3a',
+            padding: live ? 8 : 0,
+          }}
+        />
+        {full &&
+          createPortal(
             <div
+              ref={frame}
+              data-testid="ceamls-console-full"
               style={{
-                color: '#c8d3e6',
-                fontSize: 13,
-                padding: '6px 12px',
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+                position: 'fixed',
+                inset: 0,
+                zIndex: 10000,
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100vh',
+                background: '#061a3a',
               }}
             >
-              <Button variant="link" isInline onClick={leaveFull} style={{ color: '#9ec1ff' }}>
-                Leave full screen
-              </Button>{' '}
-              (or Esc).
-              {dims
-                ? ` The machine does not know the window size: run stty cols ${dims.cols} rows ${dims.rows} so editors use all of it.`
-                : ''}
-            </div>
+              <div
+                ref={overlay}
+                style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: 8 }}
+              />
+              <div
+                style={{
+                  color: '#c8d3e6',
+                  fontSize: 13,
+                  padding: '6px 12px',
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+                }}
+              >
+                <Button variant="link" isInline onClick={leaveFull} style={{ color: '#9ec1ff' }}>
+                  Leave full screen
+                </Button>{' '}
+                (or Esc).
+                {dims
+                  ? ` The machine does not know the window size: run stty cols ${dims.cols} rows ${dims.rows} so editors use all of it.`
+                  : ''}
+              </div>
+            </div>,
+            document.body,
           )}
-        </div>
       </FlexItem>
     </Flex>
   );
