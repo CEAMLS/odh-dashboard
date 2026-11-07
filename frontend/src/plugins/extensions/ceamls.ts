@@ -7,7 +7,7 @@ import { SupportedArea } from '@odh-dashboard/plugin-core/areas';
 // (Projects, which is also the landing page; there is no Home entry).
 // Top-level order, by group, on 3.6:
 //   1 Projects, 2 Workbenches, 2_x Virtual machines, 3 AI hub, 5 Develop & train,
-//   6 Observe & monitor, 6_x Storage (Volumes, Buckets), 7 Learning resources, 7_x CEAMLS Chat,
+//   6 Observe & monitor, 6_x Storage (Volumes, Buckets), 7_x CEAMLS Chat (no Learning resources),
 //   8 Applications, 8 Settings
 // CEAMLS Chat is an outside address: NavItemHref renders it as a link that
 // opens a new tab. Plan: planning/hub_pages.md in the cluster repo.

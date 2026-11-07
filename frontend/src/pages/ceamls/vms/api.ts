@@ -47,11 +47,24 @@ export type Image = {
   /** The login user the image makes. */
   user: string;
   note: string;
+  /** Extra cloud-config lines for the first boot. */
+  firstBoot?: string;
 };
+
+// The Ubuntu cloud image ships without the guest agent that tells the
+// cluster the OS is up (the others have it). Install it at the first boot.
+const UBUNTU_FIRST_BOOT =
+  'package_update: true\npackages: [qemu-guest-agent]\nruncmd: [[systemctl, enable, --now, qemu-guest-agent]]\n';
 
 /** The four images the cluster imports. The order is the order on the form. */
 export const IMAGES: Image[] = [
-  { name: 'ubuntu', title: 'Ubuntu 24.04', user: 'ubuntu', note: 'Long-term support. apt.' },
+  {
+    name: 'ubuntu',
+    title: 'Ubuntu 24.04',
+    user: 'ubuntu',
+    note: 'Long-term support. apt.',
+    firstBoot: UBUNTU_FIRST_BOOT,
+  },
   { name: 'fedora', title: 'Fedora', user: 'fedora', note: 'The current release. dnf.' },
   {
     name: 'centos-stream9',
@@ -72,14 +85,31 @@ export const imageByName = (name: string | undefined): Image | undefined =>
 
 export type Size = {
   name: string;
-  /** Cluster-wide, or the project's own (the dedicated-CPU grant). */
-  kind: 'VirtualMachineClusterInstancetype' | 'VirtualMachineInstancetype';
+  /** Cluster-wide, the project's own (the dedicated-CPU grant), or the researcher's own numbers. */
+  kind: 'VirtualMachineClusterInstancetype' | 'VirtualMachineInstancetype' | 'custom';
   cpu: number;
   memory: string;
   /** The family's display name from the object, e.g. "General purpose". */
   className: string;
   description: string;
 };
+
+export const CUSTOM_SIZE = 'custom';
+export const CUSTOM_CPU_MAX = 64;
+export const CUSTOM_MEMORY_MAX = 512;
+
+/** A size the researcher types: shared CPU and the memory reserved in full, like the U series. */
+export const customSize = (cpu: number, memoryGiB: number): Size => ({
+  name: CUSTOM_SIZE,
+  kind: 'custom',
+  cpu,
+  memory: `${memoryGiB}Gi`,
+  className: 'Custom',
+  description:
+    'Your own numbers. CPU is shared with other machines and the memory is reserved in full, like the general purpose sizes.',
+});
+
+export const isCustom = (s: Size | undefined): boolean => s?.kind === 'custom';
 
 const sizeOf = (it: InstancetypeKind, kind: Size['kind']): Size => ({
   name: it.metadata?.name ?? '',
@@ -185,7 +215,9 @@ export const formatMemory = (q: string): string => {
 };
 
 export const sizeLabel = (s: Size): string =>
-  `${s.name} · ${s.cpu} ${s.cpu === 1 ? 'CPU' : 'CPUs'}, ${formatMemory(s.memory)}`;
+  `${isCustom(s) ? 'Custom' : s.name} · ${s.cpu} ${s.cpu === 1 ? 'CPU' : 'CPUs'}, ${formatMemory(
+    s.memory,
+  )}`;
 
 /** The sizes a project may pick: the cluster families plus its own. */
 export const useSizes = (ns: string): [Size[], boolean, Error | undefined] => {
@@ -312,6 +344,19 @@ export const useVm = (
   );
 
 /** The running instance of a machine; absent when it is off. */
+export const useVmis = (ns: string): [VirtualMachineInstanceKind[], boolean, unknown] =>
+  useK8sWatchResourceList<VirtualMachineInstanceKind[]>(
+    React.useMemo(
+      () => ({
+        isList: true,
+        groupVersionKind: groupVersionKind(VirtualMachineInstanceModel),
+        namespace: ns,
+      }),
+      [ns],
+    ),
+    VirtualMachineInstanceModel,
+  );
+
 export const useVmi = (
   ns: string,
   name: string,
@@ -354,7 +399,28 @@ export const plainProblem = (message: string): string => {
   return message;
 };
 
-export const vmState = (vm: VirtualMachineKind | undefined): VmState => {
+/** How long the cluster waits for the guest agent before it calls the machine running anyway. */
+const AGENT_WAIT_MS = 5 * 60 * 1000;
+
+/** The OS is up: the guest agent inside it talks to the cluster. */
+export const agentUp = (vmi: VirtualMachineInstanceKind | undefined): boolean =>
+  vmi?.status?.conditions?.some((c) => c.type === 'AgentConnected' && c.status === 'True') ?? false;
+
+const runningSince = (vmi: VirtualMachineInstanceKind): number => {
+  const t =
+    vmi.status?.phaseTransitionTimestamps?.find((p) => p.phase === 'Running')
+      ?.phaseTransitionTimestamp ?? vmi.metadata?.creationTimestamp;
+  return t ? Date.parse(t) : Date.now();
+};
+
+/**
+ * The state in one word. "Running" means the OS is up, which the guest agent
+ * reports; a machine whose agent never comes counts as running after a while.
+ */
+export const vmState = (
+  vm: VirtualMachineKind | undefined,
+  vmi?: VirtualMachineInstanceKind,
+): VmState => {
   const s = vm?.status?.printableStatus ?? '';
   const failure = vm?.status?.conditions?.find((x) => x.type === 'Failure' && x.status === 'True');
   if (failure && s !== 'Running') {
@@ -368,6 +434,9 @@ export const vmState = (vm: VirtualMachineKind | undefined): VmState => {
   switch (s) {
     case 'Running':
     case 'Migrating':
+      if (vmi && !agentUp(vmi) && Date.now() - runningSince(vmi) < AGENT_WAIT_MS) {
+        return { word: 'Starting', tone: 'wait', busy: true };
+      }
       return { word: 'Running', tone: 'ok', busy: false };
     case 'Stopped':
       return { word: 'Stopped', tone: 'off', busy: false };
@@ -405,7 +474,20 @@ export const vmImage = (vm: VirtualMachineKind): Image | undefined =>
     vm.metadata?.labels?.[IMAGE_LABEL] ?? vm.spec.dataVolumeTemplates?.[0]?.spec.sourceRef?.name,
   );
 
-export const vmSizeName = (vm: VirtualMachineKind): string => vm.spec.instancetype?.name ?? '';
+export const vmSizeName = (vm: VirtualMachineKind): string =>
+  vm.spec.instancetype?.name ?? (vm.spec.template.spec.domain?.cpu?.cores ? CUSTOM_SIZE : '');
+
+/** The machine's size: a named one from the list, or its own numbers. */
+export const vmSize = (vm: VirtualMachineKind, sizes: Size[]): Size | undefined => {
+  const sizeName = vm.spec.instancetype?.name;
+  if (sizeName) {
+    return sizes.find((s) => s.name === sizeName);
+  }
+  const { cpu, memory } = vm.spec.template.spec.domain ?? {};
+  return cpu?.cores && memory?.guest
+    ? customSize(cpu.cores, Math.round(memoryBytesOf(memory.guest) / GIB))
+    : undefined;
+};
 
 export const vmDisk = (vm: VirtualMachineKind): string =>
   vm.spec.dataVolumeTemplates?.[0]?.spec.storage?.resources?.requests?.storage ?? '';
@@ -466,7 +548,9 @@ export const newVmObject = (ns: string, form: NewVm): VirtualMachineKind => ({
   },
   spec: {
     runStrategy: 'Always',
-    instancetype: { kind: form.size.kind, name: form.size.name },
+    ...(isCustom(form.size)
+      ? {}
+      : { instancetype: { kind: form.size.kind, name: form.size.name } }),
     preference: { kind: 'VirtualMachineClusterPreference', name: form.image.preference },
     dataVolumeTemplates: [
       {
@@ -479,13 +563,17 @@ export const newVmObject = (ns: string, form: NewVm): VirtualMachineKind => ({
     ],
     template: {
       spec: {
-        domain: { devices: {} },
+        domain: isCustom(form.size)
+          ? { devices: {}, cpu: { cores: form.size.cpu }, memory: { guest: form.size.memory } }
+          : { devices: {} },
         volumes: [
           { name: 'rootdisk', dataVolume: { name: form.name } },
           {
             name: 'cloudinitdisk',
             cloudInitNoCloud: {
-              userData: `#cloud-config\nuser: ${form.image.user}\npassword: ${form.password}\nchpasswd: { expire: False }\n`,
+              userData: `#cloud-config\nuser: ${form.image.user}\npassword: ${
+                form.password
+              }\nchpasswd: { expire: False }\n${form.image.firstBoot ?? ''}`,
             },
           },
         ],

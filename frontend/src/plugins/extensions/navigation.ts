@@ -170,16 +170,9 @@ const extensions: (NavExtension | TabRoutePageExtension)[] = [
     },
   },
 
-  {
-    type: 'app.navigation/href',
-    properties: {
-      id: 'learning-resources',
-      title: 'Learning resources',
-      href: '/learning-resources',
-      group: '7_other',
-      iconRef: () => import('#~/images/icons/LearningResourcesNavIcon'),
-    },
-  },
+  // CEAMLS: no Learning resources entry (upstream: id 'learning-resources',
+  // group '7_other'). The page still answers at /learning-resources. The
+  // CEAMLS docs are the researcher's learning resource.
 
   {
     type: 'app.navigation/section',

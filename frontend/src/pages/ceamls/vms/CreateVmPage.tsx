@@ -14,6 +14,8 @@ import {
   FormHelperText,
   FormSelect,
   FormSelectOption,
+  Flex,
+  FlexItem,
   FormSelectOptionGroup,
   HelperText,
   HelperTextItem,
@@ -34,6 +36,11 @@ import {
   memoryBytesOf,
   useRoom,
   makePassword,
+  CUSTOM_CPU_MAX,
+  CUSTOM_MEMORY_MAX,
+  CUSTOM_SIZE,
+  customSize,
+  isCustom,
   sizeLabel,
   useImages,
   useSizes,
@@ -62,15 +69,21 @@ const CreateVmPage: React.FC = () => {
   const [touched, setTouched] = React.useState(false);
   const [imageName, setImageName] = React.useState<string>(images[0]?.name ?? 'ubuntu');
   const [sizeName, setSizeName] = React.useState<string>(DEFAULT_SIZE);
+  const [customCpu, setCustomCpu] = React.useState<number | undefined>(2);
+  const [customMemory, setCustomMemory] = React.useState<number | undefined>(8);
   const [disk, setDisk] = React.useState<number | undefined>(DISK_DEFAULT);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | undefined>(undefined);
 
   const image: ImageState | undefined = images.find((i) => i.name === imageName);
   const size: Size | undefined =
-    sizes.find((s) => s.name === sizeName) ??
-    sizes.find((s) => s.name === DEFAULT_SIZE) ??
-    sizes.at(0);
+    sizeName === CUSTOM_SIZE
+      ? customCpu !== undefined && customMemory !== undefined
+        ? customSize(customCpu, customMemory)
+        : undefined
+      : sizes.find((s) => s.name === sizeName) ??
+        sizes.find((s) => s.name === DEFAULT_SIZE) ??
+        sizes.at(0);
 
   const taken = vms.some((vm) => vm.metadata?.name === name);
   let nameError: string | undefined;
@@ -94,7 +107,9 @@ const CreateVmPage: React.FC = () => {
           )} of disk space free. Pick a smaller disk, or delete a volume or a machine you do not need.`;
   }
   let sizeError: string | undefined;
-  if (size && room.cpuFree !== undefined && size.cpu > room.cpuFree) {
+  if (sizeName === CUSTOM_SIZE && !size) {
+    sizeError = `Between 1 and ${CUSTOM_CPU_MAX} CPUs, and between 1 and ${CUSTOM_MEMORY_MAX} GiB of memory.`;
+  } else if (size && room.cpuFree !== undefined && size.cpu > room.cpuFree) {
     sizeError = `The project has ${room.cpuFree} ${room.cpuFree === 1 ? 'CPU' : 'CPUs'} free of ${
       room.cpuTotal ?? 0
     }. Pick a smaller size, or stop a workbench or a machine.`;
@@ -198,7 +213,7 @@ const CreateVmPage: React.FC = () => {
           <FormGroup label="Size" isRequired fieldId="ceamls-vm-size">
             <FormSelect
               id="ceamls-vm-size"
-              value={size?.name ?? ''}
+              value={sizeName === CUSTOM_SIZE ? CUSTOM_SIZE : size?.name ?? ''}
               onChange={(_e, v) => setSizeName(v)}
               aria-describedby="ceamls-vm-size-help"
             >
@@ -209,13 +224,58 @@ const CreateVmPage: React.FC = () => {
                   ))}
                 </FormSelectOptionGroup>
               ))}
+              <FormSelectOptionGroup label="Custom">
+                <FormSelectOption value={CUSTOM_SIZE} label="Custom · your own CPUs and memory" />
+              </FormSelectOptionGroup>
             </FormSelect>
+            {sizeName === CUSTOM_SIZE && (
+              <Flex
+                gap={{ default: 'gapLg' }}
+                className="pf-v6-u-mt-sm"
+                data-testid="ceamls-vm-custom-size"
+              >
+                <FlexItem>
+                  <NumberInputWrapper
+                    id="ceamls-vm-custom-cpu"
+                    value={customCpu}
+                    min={1}
+                    max={CUSTOM_CPU_MAX}
+                    unit={customCpu === 1 ? 'CPU' : 'CPUs'}
+                    widthChars={4}
+                    onChange={(v) => setCustomCpu(v)}
+                    inputAriaLabel="CPUs"
+                    minusBtnAriaLabel="One CPU less"
+                    plusBtnAriaLabel="One CPU more"
+                  />
+                </FlexItem>
+                <FlexItem>
+                  <NumberInputWrapper
+                    id="ceamls-vm-custom-memory"
+                    value={customMemory}
+                    min={1}
+                    max={CUSTOM_MEMORY_MAX}
+                    unit="GiB of memory"
+                    widthChars={5}
+                    onChange={(v) => setCustomMemory(v)}
+                    inputAriaLabel="Memory in GiB"
+                    minusBtnAriaLabel="1 GiB less"
+                    plusBtnAriaLabel="1 GiB more"
+                  />
+                </FlexItem>
+              </Flex>
+            )}
             <FormHelperText>
               <HelperText id="ceamls-vm-size-help">
                 <HelperTextItem variant={sizeError ? 'error' : 'default'}>
                   {sizeError ??
                     (size?.description
-                      ? plainDescription(size.description)
+                      ? `${plainDescription(size.description)}${
+                          isCustom(size) && room.cpuFree !== undefined
+                            ? ` The project has ${room.cpuFree} ${
+                                room.cpuFree === 1 ? 'CPU' : 'CPUs'
+                              } and ${formatBytes(room.memoryFree ?? 0)} free.`
+                            : ''
+                        }`
                       : 'The CPUs and memory the machine gets. They count against the project quota while it runs.')}
                 </HelperTextItem>
               </HelperText>

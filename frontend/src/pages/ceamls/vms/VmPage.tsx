@@ -46,8 +46,10 @@ import {
   vmImage,
   vmPassword,
   vmProblem,
+  vmSize,
   vmSizeName,
   vmState,
+  sizeLabel,
   vmUser,
   vmiAddress,
 } from './api';
@@ -102,7 +104,7 @@ const VmPage: React.FC = () => {
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [acting, setActing] = React.useState(false);
 
-  const state = vmState(vm);
+  const state = vmState(vm, vmi);
   const running = state.tone === 'ok';
   const act = (action: 'start' | 'stop' | 'restart') => {
     setActing(true);
@@ -144,7 +146,7 @@ const VmPage: React.FC = () => {
   const image = vmImage(vm);
   const user = vmUser(vm);
   const password = vmPassword(vm);
-  const size = sizes.find((s) => s.name === vmSizeName(vm));
+  const size = vmSize(vm, sizes);
   // The watch keeps the last instance after a stop, so read the address
   // only while the machine runs.
   const address = running ? vmiAddress(vmi) : undefined;
@@ -295,11 +297,7 @@ const VmPage: React.FC = () => {
                       <DescriptionListGroup>
                         <DescriptionListTerm>Size</DescriptionListTerm>
                         <DescriptionListDescription>
-                          {size
-                            ? `${size.name} · ${size.cpu} ${
-                                size.cpu === 1 ? 'CPU' : 'CPUs'
-                              }, ${formatMemory(size.memory)}`
-                            : vmSizeName(vm) || '—'}
+                          {size ? sizeLabel(size) : vmSizeName(vm) || '—'}
                         </DescriptionListDescription>
                       </DescriptionListGroup>
                       <DescriptionListGroup>

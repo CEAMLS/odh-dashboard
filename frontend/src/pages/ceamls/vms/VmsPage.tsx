@@ -21,13 +21,33 @@ import { ProjectDetailsContext } from '#~/pages/projects/ProjectDetailsContext';
 import ProjectScopedPage from '#~/pages/ceamls/ProjectScopedPage';
 import { createVmRoute, vmRoute, vmsRoute } from '#~/pages/ceamls/routes';
 import { ConfirmDeleteModal, Loading } from '#~/pages/ceamls/buckets/common';
-import { deleteVm, errorMessage, useVms, vmAction, vmImage, vmSizeName, vmState } from './api';
-import type { VirtualMachineKind } from './types';
+import {
+  deleteVm,
+  errorMessage,
+  useSizes,
+  useVmis,
+  useVms,
+  vmAction,
+  vmImage,
+  vmSize,
+  vmSizeName,
+  vmState,
+} from './api';
+import type { Size } from './api';
+import type { VirtualMachineInstanceKind, VirtualMachineKind } from './types';
 import VmStateLabel from './VmState';
 
 export const vmsTitle = 'Virtual machines';
 export const vmsDescription =
   'Linux machines in the project, with your SSH keys installed at the first boot. Open one in the browser console here, or with virtctl ssh from your computer.';
+
+/** The size column: the name, or the numbers of a custom size. */
+const sizeText = (vm: VirtualMachineKind, sizes: Size[]): string => {
+  const s = vm.spec.instancetype?.name ? undefined : vmSize(vm, sizes);
+  return s
+    ? `${s.cpu} ${s.cpu === 1 ? 'CPU' : 'CPUs'}, ${s.memory.replace(/Gi$/, ' GiB')}`
+    : vmSizeName(vm);
+};
 
 const columns: SortableData<VirtualMachineKind>[] = [
   {
@@ -58,14 +78,16 @@ const columns: SortableData<VirtualMachineKind>[] = [
 type RowProps = {
   ns: string;
   vm: VirtualMachineKind;
+  vmi?: VirtualMachineInstanceKind;
+  sizes: Size[];
   onDelete: (vm: VirtualMachineKind) => void;
   onError: (message: string) => void;
 };
 
-const VmRow: React.FC<RowProps> = ({ ns, vm, onDelete, onError }) => {
+const VmRow: React.FC<RowProps> = ({ ns, vm, vmi, sizes, onDelete, onError }) => {
   const navigate = useNavigate();
   const name = vm.metadata?.name ?? '';
-  const state = vmState(vm);
+  const state = vmState(vm, vmi);
   const act = (action: 'start' | 'stop' | 'restart') => {
     vmAction(ns, name, action).catch((e: unknown) => onError(errorMessage(e)));
   };
@@ -89,7 +111,7 @@ const VmRow: React.FC<RowProps> = ({ ns, vm, onDelete, onError }) => {
         <Link to={vmRoute(ns, name)}>{name}</Link>
       </Td>
       <Td dataLabel="Image">{vmImage(vm)?.title ?? '—'}</Td>
-      <Td dataLabel="Size">{vmSizeName(vm) || '—'}</Td>
+      <Td dataLabel="Size">{sizeText(vm, sizes) || '—'}</Td>
       <Td dataLabel="State">
         <VmStateLabel state={state} />
       </Td>
@@ -112,6 +134,8 @@ const VmsPage: React.FC = () => {
   const ns = currentProject.metadata.name;
   const navigate = useNavigate();
   const [vms, loaded, loadError] = useVms(ns);
+  const [vmis] = useVmis(ns);
+  const [sizes] = useSizes(ns);
   const [toDelete, setToDelete] = React.useState<VirtualMachineKind | undefined>(undefined);
   const [error, setError] = React.useState<string | undefined>(undefined);
   const createHref = createVmRoute(ns);
@@ -180,6 +204,8 @@ const VmsPage: React.FC = () => {
               key={vm.metadata?.uid ?? vm.metadata?.name}
               ns={ns}
               vm={vm}
+              vmi={vmis.find((i) => i.metadata?.name === vm.metadata?.name)}
+              sizes={sizes}
               onDelete={setToDelete}
               onError={setError}
             />

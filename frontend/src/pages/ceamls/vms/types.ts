@@ -22,7 +22,12 @@ export type VirtualMachineKind = K8sResourceCommon & {
     }[];
     template: {
       spec: {
-        domain?: { devices?: Record<string, unknown> };
+        domain?: {
+          devices?: Record<string, unknown>;
+          /** A custom size: no instancetype, the CPUs and memory on the machine itself. */
+          cpu?: { cores?: number };
+          memory?: { guest?: string };
+        };
         volumes?: {
           name: string;
           dataVolume?: { name: string };
@@ -47,6 +52,8 @@ export type VirtualMachineKind = K8sResourceCommon & {
 export type VirtualMachineInstanceKind = K8sResourceCommon & {
   status?: {
     phase?: string;
+    phaseTransitionTimestamps?: { phase?: string; phaseTransitionTimestamp?: string }[];
+    conditions?: K8sCondition[];
     interfaces?: { name?: string; ipAddress?: string }[];
     guestOSInfo?: { prettyName?: string };
   };
