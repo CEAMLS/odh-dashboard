@@ -202,7 +202,7 @@ const ProjectDetails: React.FC = () => {
             ...deploymentsTab,
             {
               id: ProjectSectionID.CLUSTER_STORAGES,
-              title: 'Cluster storage',
+              title: 'Volumes', // CEAMLS: was 'Cluster storage'
               component: <StorageList />,
             },
             {

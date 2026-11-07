@@ -3,7 +3,7 @@ import { ProjectSectionID, ProjectSectionTitlesType } from './types';
 export const ProjectSectionTitles: ProjectSectionTitlesType = {
   [ProjectSectionID.OVERVIEW]: 'Overview',
   [ProjectSectionID.WORKBENCHES]: 'Workbenches',
-  [ProjectSectionID.CLUSTER_STORAGES]: 'Cluster storage',
+  [ProjectSectionID.CLUSTER_STORAGES]: 'Volumes', // CEAMLS: was 'Cluster storage'
   [ProjectSectionID.CONNECTIONS]: 'Connections',
   [ProjectSectionID.MODEL_SERVER]: 'Deployments',
   [ProjectSectionID.PIPELINES]: 'Pipelines',

@@ -6,9 +6,12 @@ import ProjectScopedLoader from '#~/pages/ceamls/ProjectScopedLoader';
 import ProjectScopedPage from '#~/pages/ceamls/ProjectScopedPage';
 import { globNamespaceAll, storageRoute } from '#~/pages/ceamls/routes';
 
-const title = 'Storage';
+// CEAMLS: "Volumes" is the researcher word for the project's persistent
+// volumes (the docs: "a disk that a workbench or a VM keeps across a stop
+// and a start"). Upstream calls them cluster storage.
+const title = 'Volumes';
 const description =
-  'Manage cluster storage: persistent volumes that keep a project’s data and can be attached to workbenches.';
+  'Volumes keep a project’s data across a stop and a start. Attach a volume to a workbench to use it there.';
 
 const GlobalStorageRoutes: React.FC = () => (
   <ProjectsRoutes>
@@ -18,7 +21,7 @@ const GlobalStorageRoutes: React.FC = () => (
         <ProjectScopedLoader
           title={title}
           description={description}
-          noProjectsBody="To add cluster storage, first create a project."
+          noProjectsBody="To add a volume, first create a project."
           getRedirectPath={storageRoute}
         />
       }
