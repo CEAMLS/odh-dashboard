@@ -18,3 +18,14 @@ export const bucketsRoute = (namespace?: string): string =>
 
 export const bucketRoute = (namespace: string, bucket: string): string =>
   `${bucketsRoute(namespace)}/${encodeURIComponent(bucket)}`;
+
+// Virtual machines (planning/vm_pages.md in the cluster repo).
+export const vmsRootPath = '/vms';
+
+export const vmsRoute = (namespace?: string): string =>
+  !namespace ? vmsRootPath : `${vmsRootPath}/${namespace}`;
+
+export const createVmRoute = (namespace: string): string => `${vmsRoute(namespace)}/create`;
+
+export const vmRoute = (namespace: string, name: string): string =>
+  `${vmsRoute(namespace)}/${encodeURIComponent(name)}`;

@@ -110,9 +110,17 @@ export default async (fastify: KubeFastifyInstance): Promise<void> => {
         );
 
         const accessToken = getAccessToken(requestOptions);
+        // CEAMLS: the browser's subprotocols go through to the cluster. A VM
+        // serial console asks for plain.kubevirt.io and refuses
+        // base64.binary.k8s.io; a watch asks for nothing and keeps the
+        // default. The cluster repo: planning/vm_pages.md section 2.2.
+        const requested = (req.headers['sec-websocket-protocol'] || '')
+          .split(',')
+          .map((p) => p.trim())
+          .filter(Boolean);
         const subprotocols = [
           `base64url.bearer.authorization.k8s.io.${base64(accessToken)}`,
-          'base64.binary.k8s.io',
+          ...(requested.length > 0 ? requested : ['base64.binary.k8s.io']),
         ];
 
         const serverAddress = fastify.server.address();

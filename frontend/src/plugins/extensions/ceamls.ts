@@ -1,13 +1,13 @@
 import type { NavExtension, RouteExtension } from '@odh-dashboard/plugin-core/extension-points';
 import { SupportedArea } from '@odh-dashboard/plugin-core/areas';
 
-// CEAMLS: top-level, project-scoped pages (Workbenches, Storage > Volumes and
-// Buckets) and the CEAMLS Chat item. Kept apart from navigation.ts/routes.ts
+// CEAMLS: top-level, project-scoped pages (Workbenches, Virtual machines,
+// Storage > Volumes and Buckets) and the CEAMLS Chat item. Kept apart from navigation.ts/routes.ts
 // so a rebase onto upstream only has to carry the one group changed there
 // (Projects, which is also the landing page; there is no Home entry).
 // Top-level order, by group, on 3.6:
-//   1 Projects, 2 Workbenches, 3 AI hub, 5 Develop & train, 6 Observe & monitor,
-//   6_x Storage (Volumes, Buckets), 7 Learning resources, 7_x CEAMLS Chat,
+//   1 Projects, 2 Workbenches, 2_x Virtual machines, 3 AI hub, 5 Develop & train,
+//   6 Observe & monitor, 6_x Storage (Volumes, Buckets), 7 Learning resources, 7_x CEAMLS Chat,
 //   8 Applications, 8 Settings
 // CEAMLS Chat is an outside address: NavItemHref renders it as a link that
 // opens a new tab. Plan: planning/hub_pages.md in the cluster repo.
@@ -24,6 +24,20 @@ const extensions: (NavExtension | RouteExtension)[] = [
       path: '/workbenches/*',
       group: '2_workbenches',
       iconRef: () => import('#~/images/icons/WorkbenchesNavIcon'),
+    },
+  },
+  {
+    type: 'app.navigation/href',
+    flags: {
+      required: [SupportedArea.DS_PROJECTS_VIEW],
+    },
+    properties: {
+      id: 'ceamls-vms',
+      title: 'Virtual machines',
+      href: '/vms',
+      path: '/vms/*',
+      group: '2_x_vms',
+      iconRef: () => import('#~/images/icons/VirtualMachinesNavIcon'),
     },
   },
   {
@@ -84,6 +98,16 @@ const extensions: (NavExtension | RouteExtension)[] = [
     properties: {
       path: '/workbenches/*',
       component: () => import('#~/pages/ceamls/workbenches/GlobalWorkbenchesRoutes'),
+    },
+  },
+  {
+    type: 'app.route',
+    flags: {
+      required: [SupportedArea.DS_PROJECTS_VIEW],
+    },
+    properties: {
+      path: '/vms/*',
+      component: () => import('#~/pages/ceamls/vms/GlobalVmsRoutes'),
     },
   },
   {
