@@ -1,4 +1,6 @@
+import * as React from 'react';
 import { AIModel } from '~/app/types';
+import { AIAssetsModelsContext } from '~/app/AIAssets/AIAssetsModelsContext';
 import useFetchAIModels from './useFetchAIModels';
 
 type UseMergedModelsResult = {
@@ -9,7 +11,11 @@ type UseMergedModelsResult = {
 };
 
 const useMergedModels = (): UseMergedModelsResult => {
-  const { data: models = [], loaded, error, refresh } = useFetchAIModels();
+  // CEAMLS: inside the Gateway page the list comes from the page; the hook's
+  // own fetch is skipped so the backend is called once per page, not per tab.
+  const shared = React.useContext(AIAssetsModelsContext);
+  const own = useFetchAIModels(!!shared);
+  const { data: models = [], loaded, error, refresh } = shared ?? own;
 
   return {
     models,

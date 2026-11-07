@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/opendatahub-io/gen-ai/internal/constants"
@@ -66,17 +67,45 @@ func (app *App) ModelsAAHandler(w http.ResponseWriter, r *http.Request, _ httpro
 	// Initialize as empty slice to ensure JSON marshals to [] instead of null
 	aaModels := make([]models.AAModel, 0)
 
-	// Fetch namespace and custom endpoint models if requested
-	if requestedSources[models.ModelSourceTypeNamespace] || requestedSources[models.ModelSourceTypeCustomEndpoint] {
-		client, err := app.kubernetesClientFactory.GetClient(ctx)
-		if err != nil {
-			app.serverErrorResponse(w, r, err)
-			return
-		}
+	// CEAMLS: the Kubernetes models and the MaaS models are fetched at the
+	// same time, not one after the other. The results are read in the same
+	// order as before, so the errors mean the same thing.
+	wantK8s := requestedSources[models.ModelSourceTypeNamespace] || requestedSources[models.ModelSourceTypeCustomEndpoint]
+	wantMaaS := requestedSources[models.ModelSourceTypeMaaS]
+	var (
+		wg         sync.WaitGroup
+		k8sModels  []models.AAModel
+		k8sErr     error
+		maasModels []models.AAModel
+		maasErr    error
+	)
+	if wantK8s {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer recoverToError(&k8sErr)
+			client, err := app.kubernetesClientFactory.GetClient(ctx)
+			if err != nil {
+				k8sErr = err
+				return
+			}
+			k8sModels, k8sErr = app.repositories.AAModels.GetAAModels(client, ctx, identity, namespace)
+		}()
+	}
+	if wantMaaS {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer recoverToError(&maasErr)
+			maasModels, maasErr = app.fetchMaaSModels(ctx, namespace)
+		}()
+	}
+	wg.Wait()
 
-		k8sModels, err := app.repositories.AAModels.GetAAModels(client, ctx, identity, namespace)
-		if err != nil {
-			app.serverErrorResponse(w, r, err)
+	// Fetch namespace and custom endpoint models if requested
+	if wantK8s {
+		if k8sErr != nil {
+			app.serverErrorResponse(w, r, k8sErr)
 			return
 		}
 
@@ -92,8 +121,8 @@ func (app *App) ModelsAAHandler(w http.ResponseWriter, r *http.Request, _ httpro
 	var partialFailure bool
 
 	// Fetch MaaS models if requested
-	if requestedSources[models.ModelSourceTypeMaaS] {
-		maasModels, err := app.fetchMaaSModels(ctx, namespace)
+	if wantMaaS {
+		err := maasErr
 		if err != nil {
 			// If only MaaS was requested, return the BFF error (preserves original status code)
 			if len(requestedSources) == 1 {
@@ -124,6 +153,15 @@ func (app *App) ModelsAAHandler(w http.ResponseWriter, r *http.Request, _ httpro
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
+	}
+}
+
+// recoverToError turns a panic in a fetch goroutine into an error, so the
+// request answers 500 instead of ending the process (the RecoverPanic
+// middleware only sees the handler's own goroutine).
+func recoverToError(target *error) {
+	if r := recover(); r != nil {
+		*target = fmt.Errorf("panic while fetching models: %v", r)
 	}
 }
 

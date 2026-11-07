@@ -13,9 +13,54 @@ import (
 	"github.com/opendatahub-io/gen-ai/internal/constants"
 	helper "github.com/opendatahub-io/gen-ai/internal/helpers"
 	"github.com/opendatahub-io/gen-ai/internal/integrations"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
+
+// sharedClientParts holds what every per-request Kubernetes client has in
+// common: the kubeconfig of the pod, the scheme, and the REST mapper, which
+// is the cache of the API discovery. None of them depends on the user.
+//
+// CEAMLS: before, newTokenKubernetesClient loaded the kubeconfig, built the
+// scheme and started a new REST mapper on every request. A new mapper
+// discovers the API groups again on its first use, so each request to this
+// backend made several serial round trips to the API server before the real
+// call, and the Gateway page waited more than a second for its three calls.
+// Discovery runs with the credentials of the pod; the request itself still
+// carries the token of the user. When the kubeconfig is not available (unit
+// tests), the parts stay empty and the per-request path builds its own.
+type sharedClientParts struct {
+	baseConfig *rest.Config
+	scheme     *runtime.Scheme
+	mapper     meta.RESTMapper
+}
+
+func newSharedClientParts(logger *slog.Logger) sharedClientParts {
+	baseConfig, err := helper.GetKubeconfig()
+	if err != nil {
+		logger.Warn("kubeconfig not available, per-request clients build their own", "error", err)
+		return sharedClientParts{}
+	}
+	scheme, err := helper.BuildScheme()
+	if err != nil {
+		logger.Warn("failed to build the shared scheme, per-request clients build their own", "error", err)
+		return sharedClientParts{}
+	}
+	httpClient, err := rest.HTTPClientFor(baseConfig)
+	if err != nil {
+		logger.Warn("failed to build the discovery HTTP client, per-request clients build their own", "error", err)
+		return sharedClientParts{}
+	}
+	mapper, err := apiutil.NewDynamicRESTMapper(baseConfig, httpClient)
+	if err != nil {
+		logger.Warn("failed to build the shared REST mapper, per-request clients build their own", "error", err)
+		return sharedClientParts{}
+	}
+	return sharedClientParts{baseConfig: baseConfig, scheme: scheme, mapper: mapper}
+}
 
 func NewKubernetesClientFactory(cfg config.EnvConfig, logger *slog.Logger, rootCAs *x509.CertPool) (KubernetesClientFactory, error) {
 	// TODO: Add support for internal auth method wherein we use the same
@@ -45,6 +90,7 @@ type TokenClientFactory struct {
 	Config            config.EnvConfig
 	SAClient          client.Client // in-cluster SA client for elevated operations (nil in local dev)
 	OTelConfigManager *otelConfigManager
+	shared            sharedClientParts
 }
 
 func NewTokenClientFactory(logger *slog.Logger, cfg config.EnvConfig, rootCAs *x509.CertPool) *TokenClientFactory {
@@ -59,6 +105,7 @@ func NewTokenClientFactory(logger *slog.Logger, cfg config.EnvConfig, rootCAs *x
 		Prefix:            cfg.AuthTokenPrefix,
 		Config:            cfg,
 		OTelConfigManager: ocm,
+		shared:            newSharedClientParts(logger),
 	}
 
 	if !cfg.MockK8sClient {
@@ -135,7 +182,7 @@ func (f *TokenClientFactory) GetClient(ctx context.Context) (KubernetesClientInt
 		return nil, fmt.Errorf("invalid or missing identity token")
 	}
 
-	return newTokenKubernetesClient(identity.Token, f.Logger, f.Config, f.SAClient, f.OTelConfigManager)
+	return newTokenKubernetesClient(identity.Token, f.Logger, f.Config, f.SAClient, f.OTelConfigManager, f.shared)
 }
 
 func (f *TokenClientFactory) ValidateRequestIdentity(identity *integrations.RequestIdentity) error {

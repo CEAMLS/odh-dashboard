@@ -304,11 +304,18 @@ func GetClusterDomainUsingServiceAccount(ctx context.Context, logger *slog.Logge
 	return domain, nil
 }
 
-func newTokenKubernetesClient(token string, logger *slog.Logger, envConfig config.EnvConfig, saClient client.Client, ocm *otelConfigManager) (*TokenKubernetesClient, error) {
-	baseConfig, err := helper.GetKubeconfig()
-	if err != nil {
-		logger.Error("failed to get kube config", "error", err)
-		return nil, fmt.Errorf("failed to get kube config: %w", err)
+func newTokenKubernetesClient(token string, logger *slog.Logger, envConfig config.EnvConfig, saClient client.Client, ocm *otelConfigManager, shared sharedClientParts) (*TokenKubernetesClient, error) {
+	// CEAMLS: the kubeconfig, the scheme and the REST mapper come from the
+	// factory when it has them (see sharedClientParts), so a request does not
+	// discover the API groups again.
+	baseConfig := shared.baseConfig
+	if baseConfig == nil {
+		var err error
+		baseConfig, err = helper.GetKubeconfig()
+		if err != nil {
+			logger.Error("failed to get kube config", "error", err)
+			return nil, fmt.Errorf("failed to get kube config: %w", err)
+		}
 	}
 
 	// Start with an anonymous config to avoid preloaded auth
@@ -323,14 +330,19 @@ func newTokenKubernetesClient(token string, logger *slog.Logger, envConfig confi
 	cfg.AuthProvider = nil
 
 	// Build custom scheme with OGXServer types
-	scheme, err := helper.BuildScheme()
-	if err != nil {
-		logger.Error("failed to build scheme", "error", err)
-		return nil, fmt.Errorf("failed to build scheme: %w", err)
+	scheme := shared.scheme
+	if scheme == nil {
+		var err error
+		scheme, err = helper.BuildScheme()
+		if err != nil {
+			logger.Error("failed to build scheme", "error", err)
+			return nil, fmt.Errorf("failed to build scheme: %w", err)
+		}
 	}
 
-	// Create controller-runtime client with custom scheme
-	ctrlClient, err := client.New(cfg, client.Options{Scheme: scheme})
+	// Create controller-runtime client with custom scheme. A nil Mapper makes
+	// the client build its own (and discover the API again).
+	ctrlClient, err := client.New(cfg, client.Options{Scheme: scheme, Mapper: shared.mapper})
 	if err != nil {
 		logger.Error("failed to create token-based Kubernetes client", "error", err)
 		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
@@ -367,7 +379,9 @@ func (kc *TokenKubernetesClient) GetNamespaces(ctx context.Context, identity *in
 	userConfig.BearerTokenFile = ""
 
 	// Create controller-runtime client with user token
-	userClient, err := client.New(userConfig, client.Options{Scheme: kc.Client.Scheme()})
+	// CEAMLS: reuse the REST mapper of the request client, so this second
+	// client does not discover the API groups again.
+	userClient, err := client.New(userConfig, client.Options{Scheme: kc.Client.Scheme(), Mapper: kc.Client.RESTMapper()})
 	if err != nil {
 		kc.Logger.Error("failed to create user client", "error", err)
 		return nil, fmt.Errorf("failed to create user client: %w", err)
@@ -679,7 +693,14 @@ func (kc *TokenKubernetesClient) GetConfigMap(ctx context.Context, identity *int
 	}, configMap)
 
 	if err != nil {
-		kc.Logger.Error("failed to get ConfigMap", "error", err, "namespace", namespace, "name", name)
+		// CEAMLS: a missing ConfigMap is normal (the callers read optional
+		// ones, such as the custom endpoints and the vector stores of a
+		// project), so it is not an error in the log.
+		if apierrors.IsNotFound(err) {
+			kc.Logger.Debug("ConfigMap not found", "namespace", namespace, "name", name)
+		} else {
+			kc.Logger.Error("failed to get ConfigMap", "error", err, "namespace", namespace, "name", name)
+		}
 		return nil, fmt.Errorf("failed to get ConfigMap: %w", err)
 	}
 

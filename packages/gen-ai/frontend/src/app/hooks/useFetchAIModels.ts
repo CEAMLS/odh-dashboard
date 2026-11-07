@@ -49,7 +49,9 @@ export const isValidAAModel = (item: unknown): item is AAModelResponse =>
   Array.isArray(item.endpoints) &&
   item.endpoints.every((e: unknown) => typeof e === 'string');
 
-const useFetchAIModels = (): FetchStateObject<AIModel[]> => {
+// CEAMLS: `skip` makes the hook inert (no request, never loaded). useMergedModels
+// passes it when the Gateway page already holds the list.
+const useFetchAIModels = (skip = false): FetchStateObject<AIModel[]> => {
   const { api, apiAvailable } = useGenAiAPI();
   const maaSEnabled = !!useAiAssetModelAsServiceEnabled();
   const genAiConfig = useGenAiDashboardConfig();
@@ -62,6 +64,9 @@ const useFetchAIModels = (): FetchStateObject<AIModel[]> => {
 
   const fetchAIModels = React.useCallback<FetchStateCallbackPromise<AIModel[]>>(
     async (opts: APIOptions) => {
+      if (skip) {
+        return Promise.reject(new NotReadyError('Models come from the page'));
+      }
       if (!apiAvailable) {
         return Promise.reject(new NotReadyError('API not yet available'));
       }
@@ -96,7 +101,7 @@ const useFetchAIModels = (): FetchStateObject<AIModel[]> => {
         };
       });
     },
-    [api, apiAvailable, clusterDomains, queryParams],
+    [api, apiAvailable, clusterDomains, queryParams, skip],
   );
 
   const [data, loaded, error, refresh] = useFetchState(fetchAIModels, [], {

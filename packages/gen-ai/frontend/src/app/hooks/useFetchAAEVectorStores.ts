@@ -8,18 +8,26 @@ import {
 import { ExternalVectorStoreSummary } from '~/app/types';
 import { useGenAiAPI } from './useGenAiAPI';
 
-const useFetchAAEVectorStores = (): FetchStateObject<ExternalVectorStoreSummary[]> => {
+// CEAMLS: `enabled=false` answers an empty, loaded list without a request. The
+// models table passes the external vector stores feature flag, so a cluster
+// that has the feature off does not call the backend for it.
+const useFetchAAEVectorStores = (
+  enabled = true,
+): FetchStateObject<ExternalVectorStoreSummary[]> => {
   const { api, apiAvailable } = useGenAiAPI();
 
   const fetchVectorStores = React.useCallback<
     FetchStateCallbackPromise<ExternalVectorStoreSummary[]>
   >(async () => {
+    if (!enabled) {
+      return [];
+    }
     if (!apiAvailable) {
       return Promise.reject(new NotReadyError('API not yet available'));
     }
     const stores = await api.getAAVectorStores();
     return Array.isArray(stores) ? stores : [];
-  }, [api, apiAvailable]);
+  }, [api, apiAvailable, enabled]);
 
   const [data, loaded, error, refresh] = useFetchState(fetchVectorStores, [], {
     initialPromisePurity: true,

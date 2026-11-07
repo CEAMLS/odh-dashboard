@@ -19,6 +19,11 @@ jest.mock('@odh-dashboard/plugin-core', () => ({
 }));
 
 // Mock GenAiCoreHeader
+jest.mock('~/app/hooks/useFetchAIModels', () => ({
+  __esModule: true,
+  default: () => ({ data: [], loaded: false, error: undefined, refresh: jest.fn() }),
+}));
+
 jest.mock('~/app/GenAiCoreHeader', () => ({
   __esModule: true,
   default: ({ title }: { title: string }) => <div data-testid="header">{title}</div>,

@@ -16,6 +16,7 @@ import { AIModel, LlamaModel, LlamaStackDistributionModel } from '~/app/types';
 import { aiModelColumns } from '~/app/AIAssets/data/columns';
 import useAIModelsFilter from '~/app/AIAssets/hooks/useAIModelsFilter';
 import useFetchAAEVectorStores from '~/app/hooks/useFetchAAEVectorStores';
+import useAiAssetVectorStoresEnabled from '~/app/hooks/useAiAssetVectorStoresEnabled';
 import useFetchVectorStores from '~/app/hooks/useFetchVectorStores';
 import useChatPlaygroundEnabled from '~/app/hooks/useChatPlaygroundEnabled';
 import {
@@ -119,7 +120,9 @@ const AIModelsTable: React.FC<AIModelsTableProps> = ({
   onDelete,
 }) => {
   const { filterData, onFilterUpdate, onClearFilters, filteredModels } = useAIModelsFilter(models);
-  const { data: allCollections, loaded: collectionsLoaded } = useFetchAAEVectorStores();
+  const isVectorStoresEnabled = useAiAssetVectorStoresEnabled();
+  const { data: allCollections, loaded: collectionsLoaded } =
+    useFetchAAEVectorStores(isVectorStoresEnabled);
   const isChatPlaygroundEnabled = useChatPlaygroundEnabled();
   const [existingCollections] = useFetchVectorStores();
 

@@ -20,6 +20,8 @@ import GenAiCoreHeader from '~/app/GenAiCoreHeader';
 import { genAiAiAssetsRoute, genAiAiAssetsTabRoute } from '~/app/utilities/routes';
 import AiAssetEndpointsIcon from '~/app/images/icons/AiAssetEndpointsIcon';
 import { isAIAssetsTabExtension } from '~/odh/extension-points';
+import useFetchAIModels from '~/app/hooks/useFetchAIModels';
+import { AIAssetsModelsContext } from './AIAssetsModelsContext';
 
 export const AIAssetsPage: React.FC = () => {
   const tabExtensions = useExtensions(isAIAssetsTabExtension);
@@ -29,86 +31,90 @@ export const AIAssetsPage: React.FC = () => {
   const defaultTab = tabExtensions[0]?.properties.id || '';
   const isValidTab = tabExtensions.some((ext) => ext.properties.id === tabParam);
   const activeTabKey = isValidTab ? String(tabParam) : defaultTab;
+  // CEAMLS: one model list for every tab (AIAssetsModelsContext).
+  const models = useFetchAIModels();
 
   return (
-    <ApplicationsPage
-      title={
-        <GenAiCoreHeader
-          title="Gateway"
-          getRedirectPath={genAiAiAssetsRoute}
-          icon={AiAssetEndpointsIcon}
-        />
-      }
-      description="Browse the models that the model gateway serves to this project, with their endpoints and API keys. Open a model in the playground to try it."
-      loaded
-      empty={false}
-    >
-      <PageSection>
-        <Tabs
-          activeKey={activeTabKey}
-          onSelect={(_, tabKey) => {
-            if (namespace) {
-              navigate(genAiAiAssetsTabRoute(namespace, String(tabKey)));
-            }
-            fireMiscTrackingEvent('Available Endpoints Tab Switched', {
-              source: String(tabKey),
-            });
-          }}
-          aria-label="AI Assets tabs"
-          role="region"
-        >
-          {tabExtensions.map((extension) => (
-            <Tab
-              key={extension.properties.id}
-              eventKey={extension.properties.id}
-              title={
-                <TabTitleText>
-                  {extension.properties.label ? (
-                    <Flex spaceItems={{ default: 'spaceItemsSm' }}>
-                      <FlexItem>{extension.properties.title}</FlexItem>
-                      <FlexItem>
-                        <Label color="orange" variant="outline" isCompact>
-                          {extension.properties.label}
-                        </Label>
-                      </FlexItem>
-                    </Flex>
-                  ) : (
-                    extension.properties.title
-                  )}
-                </TabTitleText>
-              }
-              aria-label={`${extension.properties.title} tab`}
-              tabContentId={`${extension.properties.id}-tab-content`}
-              data-testid={`ai-assets-tab-${extension.properties.id}`}
-            />
-          ))}
-        </Tabs>
-      </PageSection>
-
-      <PageSection>
-        {tabExtensions.map((extension) => (
-          <TabContent
-            key={extension.properties.id}
-            id={`${extension.properties.id}-tab-content`}
+    <AIAssetsModelsContext.Provider value={models}>
+      <ApplicationsPage
+        title={
+          <GenAiCoreHeader
+            title="Gateway"
+            getRedirectPath={genAiAiAssetsRoute}
+            icon={AiAssetEndpointsIcon}
+          />
+        }
+        description="Browse the models that the model gateway serves to this project, with their endpoints and API keys. Open a model in the playground to try it."
+        loaded
+        empty={false}
+      >
+        <PageSection>
+          <Tabs
             activeKey={activeTabKey}
-            eventKey={extension.properties.id}
-            hidden={activeTabKey !== extension.properties.id}
+            onSelect={(_, tabKey) => {
+              if (namespace) {
+                navigate(genAiAiAssetsTabRoute(namespace, String(tabKey)));
+              }
+              fireMiscTrackingEvent('Available Endpoints Tab Switched', {
+                source: String(tabKey),
+              });
+            }}
+            aria-label="AI Assets tabs"
+            role="region"
           >
-            <TabContentBody>
-              {activeTabKey === extension.properties.id && (
-                <LazyCodeRefComponent
-                  component={extension.properties.component}
-                  fallback={
-                    <Bullseye>
-                      <Spinner />
-                    </Bullseye>
-                  }
-                />
-              )}
-            </TabContentBody>
-          </TabContent>
-        ))}
-      </PageSection>
-    </ApplicationsPage>
+            {tabExtensions.map((extension) => (
+              <Tab
+                key={extension.properties.id}
+                eventKey={extension.properties.id}
+                title={
+                  <TabTitleText>
+                    {extension.properties.label ? (
+                      <Flex spaceItems={{ default: 'spaceItemsSm' }}>
+                        <FlexItem>{extension.properties.title}</FlexItem>
+                        <FlexItem>
+                          <Label color="orange" variant="outline" isCompact>
+                            {extension.properties.label}
+                          </Label>
+                        </FlexItem>
+                      </Flex>
+                    ) : (
+                      extension.properties.title
+                    )}
+                  </TabTitleText>
+                }
+                aria-label={`${extension.properties.title} tab`}
+                tabContentId={`${extension.properties.id}-tab-content`}
+                data-testid={`ai-assets-tab-${extension.properties.id}`}
+              />
+            ))}
+          </Tabs>
+        </PageSection>
+
+        <PageSection>
+          {tabExtensions.map((extension) => (
+            <TabContent
+              key={extension.properties.id}
+              id={`${extension.properties.id}-tab-content`}
+              activeKey={activeTabKey}
+              eventKey={extension.properties.id}
+              hidden={activeTabKey !== extension.properties.id}
+            >
+              <TabContentBody>
+                {activeTabKey === extension.properties.id && (
+                  <LazyCodeRefComponent
+                    component={extension.properties.component}
+                    fallback={
+                      <Bullseye>
+                        <Spinner />
+                      </Bullseye>
+                    }
+                  />
+                )}
+              </TabContentBody>
+            </TabContent>
+          ))}
+        </PageSection>
+      </ApplicationsPage>
+    </AIAssetsModelsContext.Provider>
   );
 };

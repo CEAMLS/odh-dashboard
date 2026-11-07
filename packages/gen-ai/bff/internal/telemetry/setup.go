@@ -135,16 +135,13 @@ func discoverCollectorEndpoint(logger *slog.Logger) string {
 		}
 	}
 
-	// Gen-ai collector doesn't exist yet — derive its future endpoint from
-	// the platform collector's namespace (same namespace used by EnsureRoute).
-	for _, item := range list.Items {
-		if item.GetName() == constants.PlatformCollectorName {
-			ns := item.GetNamespace()
-			endpoint := fmt.Sprintf("http://%s-collector.%s.svc:4318", constants.GenAICollectorName, ns)
-			logger.Info("gen-ai collector not yet created, targeting future endpoint from platform collector namespace", "endpoint", endpoint)
-			return endpoint
-		}
-	}
+	// CEAMLS: upstream pointed the exporter at the future address of the
+	// gen-ai collector when only the platform collector existed. On a cluster
+	// that never installs the playground tracing, that collector never comes,
+	// and the exporter failed a DNS lookup every five seconds for the life of
+	// the pod. Tracing stays off until the gen-ai collector exists at
+	// start-up; a pod that starts after the collector is created traces.
+	logger.Info("gen-ai trace collector not found, OTel tracing disabled")
 
 	return ""
 }
