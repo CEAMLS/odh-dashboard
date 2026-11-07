@@ -33,6 +33,7 @@ const SerialConsole: React.FC<Props> = ({ ns, name, running, starting = false, u
   const [dims, setDims] = React.useState<{ cols: number; rows: number } | undefined>(undefined);
 
   const disconnect = React.useCallback(() => {
+    setFull(false);
     socket.current?.close();
     socket.current = null;
     term.current?.dispose();
@@ -118,19 +119,46 @@ const SerialConsole: React.FC<Props> = ({ ns, name, running, starting = false, u
     return () => ro.disconnect();
   }, []);
 
-  React.useEffect(() => {
-    const onChange = () => setFull(document.fullscreenElement === frame.current);
-    document.addEventListener('fullscreenchange', onChange);
-    return () => document.removeEventListener('fullscreenchange', onChange);
+  // Full screen is the console pinned over the whole viewport. The browser's
+  // own full screen mode is asked for too, and taken when it is granted;
+  // Esc leaves either way.
+  const leaveFull = React.useCallback(() => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => undefined);
+    }
+    setFull(false);
   }, []);
 
   const toggleFull = () => {
-    if (document.fullscreenElement) {
-      void document.exitFullscreen();
-    } else {
-      void frame.current?.requestFullscreen();
+    if (full) {
+      leaveFull();
+      return;
     }
+    setFull(true);
+    frame.current?.requestFullscreen().catch(() => undefined);
   };
+
+  React.useEffect(() => {
+    if (!full) {
+      return undefined;
+    }
+    const onChange = () => {
+      if (!document.fullscreenElement) {
+        setFull(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        leaveFull();
+      }
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [full, leaveFull]);
 
   React.useEffect(() => {
     if (!running && phase === 'open') {
@@ -199,6 +227,9 @@ const SerialConsole: React.FC<Props> = ({ ns, name, running, starting = false, u
           style={
             full
               ? {
+                  position: 'fixed',
+                  inset: 0,
+                  zIndex: 10000,
                   display: 'flex',
                   flexDirection: 'column',
                   height: '100vh',
@@ -229,7 +260,10 @@ const SerialConsole: React.FC<Props> = ({ ns, name, running, starting = false, u
                 fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
               }}
             >
-              Esc leaves full screen.
+              <Button variant="link" isInline onClick={leaveFull} style={{ color: '#9ec1ff' }}>
+                Leave full screen
+              </Button>{' '}
+              (or Esc).
               {dims
                 ? ` The machine does not know the window size: run stty cols ${dims.cols} rows ${dims.rows} so editors use all of it.`
                 : ''}
