@@ -62,3 +62,10 @@ export type InstancetypeKind = K8sResourceCommon & {
 export type DataSourceKind = K8sResourceCommon & {
   status?: { conditions?: K8sCondition[] };
 };
+
+export type ResourceQuotaKind = K8sResourceCommon & {
+  status?: {
+    hard?: Record<string, string>;
+    used?: Record<string, string>;
+  };
+};

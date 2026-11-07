@@ -36,3 +36,9 @@ export const DataSourceModel: K8sModelCommon = {
   kind: 'DataSource',
   plural: 'datasources',
 };
+
+export const ResourceQuotaModel: K8sModelCommon = {
+  apiVersion: 'v1',
+  kind: 'ResourceQuota',
+  plural: 'resourcequotas',
+};

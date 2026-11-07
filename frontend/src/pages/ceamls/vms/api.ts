@@ -17,12 +17,14 @@ import {
   ClusterInstancetypeModel,
   DataSourceModel,
   InstancetypeModel,
+  ResourceQuotaModel,
   VirtualMachineInstanceModel,
   VirtualMachineModel,
 } from './models';
 import type {
   DataSourceKind,
   InstancetypeKind,
+  ResourceQuotaKind,
   VirtualMachineInstanceKind,
   VirtualMachineKind,
 } from './types';
@@ -31,6 +33,8 @@ import type {
 
 /** The namespace that holds the golden images (fixed by the operator). */
 export const IMAGES_NS = 'kubevirt-os-images';
+/** The storage class a machine's disk lands on; the quota key starts with it. */
+export const DISK_CLASS = 'ceph-safe';
 
 export const SSH_KEYS_SECRET = 'ceamls-ssh-keys';
 
@@ -86,7 +90,7 @@ const sizeOf = (it: InstancetypeKind, kind: Size['kind']): Size => ({
   description: it.metadata?.annotations?.['instancetype.kubevirt.io/description'] ?? '',
 });
 
-const memoryBytes = (q: string): number => {
+export const memoryBytesOf = (q: string): number => {
   const m = /^(\d+(?:\.\d+)?)([KMGT]i?)?$/.exec(q.trim());
   if (!m) {
     return 0;
@@ -106,6 +110,72 @@ const memoryBytes = (q: string): number => {
   };
   const base = unit.endsWith('i') ? 1024 : 1000;
   return n * base ** (powers[unit] ?? 0);
+};
+
+/** "5615m" as 5.615, "2" as 2. */
+const cpuCores = (q: string): number => {
+  const m = /^(\d+(?:\.\d+)?)(m?)$/.exec(q.trim());
+  if (!m) {
+    return 0;
+  }
+  return m[2] ? Number(m[1]) / 1000 : Number(m[1]);
+};
+
+const GIB = 1024 ** 3;
+
+/** Bytes as "30 GiB" or "512 MiB". */
+export const formatBytes = (b: number): string =>
+  b >= GIB ? `${Math.round((b / GIB) * 10) / 10} GiB` : `${Math.round(b / 1024 ** 2)} MiB`;
+
+/** What the project's quota still allows, read from its ResourceQuota objects. */
+export type Room = {
+  loaded: boolean;
+  /** Bytes of disk still free on the storage class the disks use, or undefined without a limit. */
+  diskFree?: number;
+  diskTotal?: number;
+  cpuFree?: number;
+  cpuTotal?: number;
+  memoryFree?: number;
+  memoryTotal?: number;
+};
+
+const DISK_QUOTA_KEY = /storageclass\.storage\.k8s\.io\/requests\.storage$/;
+
+export const useRoom = (ns: string): Room => {
+  const [quotas, loaded] = useK8sWatchResourceList<ResourceQuotaKind[]>(
+    React.useMemo(
+      () => ({
+        isList: true,
+        groupVersionKind: groupVersionKind(ResourceQuotaModel),
+        namespace: ns,
+      }),
+      [ns],
+    ),
+    ResourceQuotaModel,
+  );
+  return React.useMemo(() => {
+    const room: Room = { loaded };
+    quotas.forEach((q) => {
+      const hard = q.status?.hard ?? {};
+      const used = q.status?.used ?? {};
+      Object.keys(hard).forEach((key) => {
+        if (DISK_QUOTA_KEY.test(key) && key.startsWith(DISK_CLASS)) {
+          const total = memoryBytesOf(hard[key]);
+          room.diskTotal = total;
+          room.diskFree = Math.max(0, total - memoryBytesOf(used[key] ?? '0'));
+        } else if (key === 'requests.cpu') {
+          const total = cpuCores(hard[key]);
+          room.cpuTotal = total;
+          room.cpuFree = Math.max(0, total - cpuCores(used[key] ?? '0'));
+        } else if (key === 'requests.memory') {
+          const total = memoryBytesOf(hard[key]);
+          room.memoryTotal = total;
+          room.memoryFree = Math.max(0, total - memoryBytesOf(used[key] ?? '0'));
+        }
+      });
+    });
+    return room;
+  }, [quotas, loaded]);
 };
 
 /** "4Gi" as "4 GiB", "512Mi" as "512 MiB". */
@@ -146,7 +216,7 @@ export const useSizes = (ns: string): [Size[], boolean, Error | undefined] => {
       (a, b) =>
         a.className.localeCompare(b.className) ||
         a.cpu - b.cpu ||
-        memoryBytes(a.memory) - memoryBytes(b.memory),
+        memoryBytesOf(a.memory) - memoryBytesOf(b.memory),
     );
   }, [cluster, own]);
   return [sizes, clusterLoaded && ownLoaded, clusterError ?? ownError];
@@ -208,7 +278,8 @@ const present = <T extends K8sResourceCommon>(
   result: WatchK8sResult<T>,
 ): [T | undefined, boolean, unknown] => {
   const [data, loaded, error] = result;
-  return [data.metadata?.name ? data : undefined, loaded, error];
+  const maybe: T | null | undefined = data;
+  return [maybe.metadata?.name ? maybe : undefined, loaded, error];
 };
 
 export const useVm = (
@@ -262,8 +333,28 @@ export type VmState = {
 };
 
 /** The machine's state in one word, from the cluster's printable status. */
+/** The quota message of the cluster in the project's words. */
+export const plainProblem = (message: string): string => {
+  if (/exceeded quota/.test(message)) {
+    if (/requests\.storage/.test(message)) {
+      return 'The project has no disk space left for this machine. Delete a volume or a machine you do not need, or ask for more space.';
+    }
+    return 'The project has no CPU or memory left for this machine. Stop a workbench or a machine, or delete this one and pick a smaller size.';
+  }
+  return message;
+};
+
 export const vmState = (vm: VirtualMachineKind | undefined): VmState => {
   const s = vm?.status?.printableStatus ?? '';
+  const failure = vm?.status?.conditions?.find((x) => x.type === 'Failure' && x.status === 'True');
+  if (failure && s !== 'Running') {
+    return {
+      word: 'Not running',
+      tone: 'bad',
+      busy: false,
+      detail: plainProblem(failure.message || failure.reason || s),
+    };
+  }
   switch (s) {
     case 'Running':
     case 'Migrating':
@@ -289,10 +380,14 @@ export const vmState = (vm: VirtualMachineKind | undefined): VmState => {
 
 /** The last condition that explains a problem, if any. */
 export const vmProblem = (vm: VirtualMachineKind | undefined): string | undefined => {
+  const state = vmState(vm);
+  if (state.detail) {
+    return state.detail;
+  }
   const c = vm?.status?.conditions?.find(
-    (x) => x.status === 'False' && (x.type === 'Ready' || x.type === 'DataVolumesReady'),
+    (x) => x.status === 'False' && x.type === 'DataVolumesReady',
   );
-  return c?.message || c?.reason;
+  return c?.message ? plainProblem(c.message) : undefined;
 };
 
 export const vmImage = (vm: VirtualMachineKind): Image | undefined =>

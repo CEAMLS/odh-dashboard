@@ -146,7 +146,7 @@ const VmPage: React.FC = () => {
   const password = vmPassword(vm);
   const size = sizes.find((s) => s.name === vmSizeName(vm));
   const address = vmiAddress(vmi);
-  const problem = state.tone === 'bad' ? vmProblem(vm) ?? state.detail : undefined;
+  const problem = state.tone === 'bad' ? vmProblem(vm) : undefined;
   const sshLine = `virtctl ssh ${user}@vm/${name}/${ns}`;
 
   return (

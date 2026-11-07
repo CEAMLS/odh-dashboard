@@ -30,6 +30,9 @@ import {
   NAME_RE,
   createVm,
   errorMessage,
+  formatBytes,
+  memoryBytesOf,
+  useRoom,
   makePassword,
   sizeLabel,
   useImages,
@@ -53,6 +56,7 @@ const CreateVmPage: React.FC = () => {
   const [images, imagesLoaded] = useImages();
   const [sizes, sizesLoaded] = useSizes(ns);
   const [vms] = useVms(ns);
+  const room = useRoom(ns);
 
   const [name, setName] = React.useState('');
   const [touched, setTouched] = React.useState(false);
@@ -77,10 +81,34 @@ const CreateVmPage: React.FC = () => {
   } else if (taken) {
     nameError = 'A machine with this name exists in the project.';
   }
-  const diskError = disk === undefined ? `Between ${DISK_MIN} and ${DISK_MAX} GiB.` : undefined;
+  const diskBytes = (disk ?? 0) * 1024 ** 3;
+  let diskError: string | undefined;
+  if (disk === undefined) {
+    diskError = `Between ${DISK_MIN} and ${DISK_MAX} GiB.`;
+  } else if (room.diskFree !== undefined && diskBytes > room.diskFree) {
+    diskError = `The project has ${formatBytes(
+      room.diskFree,
+    )} of disk space free. Pick a smaller disk, or delete a volume or a machine you do not need.`;
+  }
+  let sizeError: string | undefined;
+  if (size && room.cpuFree !== undefined && size.cpu > room.cpuFree) {
+    sizeError = `The project has ${room.cpuFree} ${room.cpuFree === 1 ? 'CPU' : 'CPUs'} free of ${
+      room.cpuTotal ?? 0
+    }. Pick a smaller size, or stop a workbench or a machine.`;
+  } else if (
+    size &&
+    room.memoryFree !== undefined &&
+    memoryBytesOf(size.memory) > room.memoryFree
+  ) {
+    sizeError = `The project has ${formatBytes(room.memoryFree)} of memory free of ${formatBytes(
+      room.memoryTotal ?? 0,
+    )}. Pick a smaller size, or stop a workbench or a machine.`;
+  }
   // The form is complete when every part is present and valid.
   const complete = (): { image: ImageState; size: Size; disk: number } | undefined =>
-    !nameError && image?.ready && size && disk !== undefined ? { image, size, disk } : undefined;
+    !nameError && !diskError && !sizeError && image?.ready && size && disk !== undefined
+      ? { image, size, disk }
+      : undefined;
   const ready = !busy && complete() !== undefined;
 
   const groups = React.useMemo(() => {
@@ -181,10 +209,11 @@ const CreateVmPage: React.FC = () => {
             </FormSelect>
             <FormHelperText>
               <HelperText id="ceamls-vm-size-help">
-                <HelperTextItem>
-                  {size?.description
-                    ? plainDescription(size.description)
-                    : 'The CPUs and memory the machine gets. They count against the project quota while it runs.'}
+                <HelperTextItem variant={sizeError ? 'error' : 'default'}>
+                  {sizeError ??
+                    (size?.description
+                      ? plainDescription(size.description)
+                      : 'The CPUs and memory the machine gets. They count against the project quota while it runs.')}
                 </HelperTextItem>
               </HelperText>
             </FormHelperText>
@@ -208,7 +237,11 @@ const CreateVmPage: React.FC = () => {
               <HelperText>
                 <HelperTextItem variant={diskError ? 'error' : 'default'}>
                   {diskError ??
-                    `The machine's own disk, kept while it is stopped. ${DISK_DEFAULT} GiB is enough for most work.`}
+                    `The machine's own disk, kept while it is stopped. ${DISK_DEFAULT} GiB is enough for most work.${
+                      room.diskFree !== undefined
+                        ? ` The project has ${formatBytes(room.diskFree)} free.`
+                        : ''
+                    }`}
                 </HelperTextItem>
               </HelperText>
             </FormHelperText>
