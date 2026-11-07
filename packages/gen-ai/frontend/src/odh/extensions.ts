@@ -170,7 +170,8 @@ const extensions: (
       href: aiAssetsRootPath,
       section: 'gen-ai-studio',
       path: globAiAssetsAll,
-      label: 'Tech Preview',
+      // CEAMLS: no "Tech Preview" tag; the page is the normal way to the
+      // platform models here.
     },
   },
   {
