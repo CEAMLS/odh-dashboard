@@ -8,6 +8,7 @@ import {
   k8sDeleteResource,
   useK8sWatchResource,
 } from '@openshift/dynamic-plugin-sdk-utils';
+import type { K8sResourceCommon, WatchK8sResult } from '@openshift/dynamic-plugin-sdk-utils';
 import { K8sStatusError, isK8sStatus } from '@odh-dashboard/k8s-core';
 import { groupVersionKind } from '#~/api/k8sUtils';
 import useK8sWatchResourceList from '#~/utilities/useK8sWatchResourceList';
@@ -202,21 +203,31 @@ export const useVms = (ns: string): CustomWatchK8sResult<VirtualMachineKind[]> =
     VirtualMachineModel,
   );
 
+/** The SDK gives `{}` for a single object before it arrives; that is "absent". */
+const present = <T extends K8sResourceCommon>(
+  result: WatchK8sResult<T>,
+): [T | undefined, boolean, unknown] => {
+  const [data, loaded, error] = result;
+  return [data.metadata?.name ? data : undefined, loaded, error];
+};
+
 export const useVm = (
   ns: string,
   name: string,
 ): [VirtualMachineKind | undefined, boolean, unknown] =>
-  useK8sWatchResource<VirtualMachineKind>(
-    React.useMemo(
-      () => ({
-        isList: false,
-        groupVersionKind: groupVersionKind(VirtualMachineModel),
-        namespace: ns,
-        name,
-      }),
-      [ns, name],
+  present(
+    useK8sWatchResource<VirtualMachineKind>(
+      React.useMemo(
+        () => ({
+          isList: false,
+          groupVersionKind: groupVersionKind(VirtualMachineModel),
+          namespace: ns,
+          name,
+        }),
+        [ns, name],
+      ),
+      VirtualMachineModel,
     ),
-    VirtualMachineModel,
   );
 
 /** The running instance of a machine; absent when it is off. */
@@ -224,17 +235,19 @@ export const useVmi = (
   ns: string,
   name: string,
 ): [VirtualMachineInstanceKind | undefined, boolean, unknown] =>
-  useK8sWatchResource<VirtualMachineInstanceKind>(
-    React.useMemo(
-      () => ({
-        isList: false,
-        groupVersionKind: groupVersionKind(VirtualMachineInstanceModel),
-        namespace: ns,
-        name,
-      }),
-      [ns, name],
+  present(
+    useK8sWatchResource<VirtualMachineInstanceKind>(
+      React.useMemo(
+        () => ({
+          isList: false,
+          groupVersionKind: groupVersionKind(VirtualMachineInstanceModel),
+          namespace: ns,
+          name,
+        }),
+        [ns, name],
+      ),
+      VirtualMachineInstanceModel,
     ),
-    VirtualMachineInstanceModel,
   );
 
 export type StateTone = 'ok' | 'off' | 'wait' | 'bad';

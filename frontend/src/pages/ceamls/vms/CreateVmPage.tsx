@@ -23,6 +23,7 @@ import {
 } from '@patternfly/react-core';
 import { ApplicationsPage } from '@odh-dashboard/ui-core';
 import NumberInputWrapper from '@odh-dashboard/ui-core/components/NumberInputWrapper';
+import { getDisplayNameFromK8sResource } from '@odh-dashboard/k8s-core';
 import { ProjectDetailsContext } from '#~/pages/projects/ProjectDetailsContext';
 import { vmRoute, vmsRoute } from '#~/pages/ceamls/routes';
 import {
@@ -110,7 +111,9 @@ const CreateVmPage: React.FC = () => {
   return (
     <ApplicationsPage
       title="Create virtual machine"
-      description={`A Linux machine in ${currentProject.metadata.name}. It starts as soon as it is made.`}
+      description={`A Linux machine in ${getDisplayNameFromK8sResource(
+        currentProject,
+      )}. It starts as soon as it is made.`}
       breadcrumb={
         <Breadcrumb>
           <BreadcrumbItem render={() => <Link to={vmsRoute(ns)}>Virtual machines</Link>} />
@@ -126,7 +129,7 @@ const CreateVmPage: React.FC = () => {
             <TextInput
               id="ceamls-vm-name"
               value={name}
-              onChange={(_e, v) => setName(v.trim().toLowerCase())}
+              onChange={(_e, v) => setName(v.toLowerCase().replace(/\s+/g, '-'))}
               onBlur={() => setTouched(true)}
               validated={touched && nameError ? 'error' : 'default'}
               aria-describedby="ceamls-vm-name-help"
