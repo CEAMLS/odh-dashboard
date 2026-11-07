@@ -40,8 +40,8 @@ const StorageList: React.FC<StorageListProps> = ({ showTitle = true }) => {
         popover={
           showTitle && (
             <Popover
-              headerContent="About cluster storage"
-              bodyContent="Cluster storage saves your project’s data on a selected cluster. You can optionally connect cluster storage to a workbench. "
+              headerContent="About volumes"
+              bodyContent="A volume keeps your project’s data across a stop and a start. You can attach a volume to a workbench. "
             >
               <DashboardPopupIconButton
                 icon={<OutlinedQuestionCircleIcon />}
@@ -57,7 +57,7 @@ const StorageList: React.FC<StorageListProps> = ({ showTitle = true }) => {
             variant="primary"
             data-testid="actions-cluster-storage-button"
           >
-            Add cluster storage
+            Add volume
           </Button>,
         ]}
         isLoading={!pvcsLoaded}
@@ -65,17 +65,17 @@ const StorageList: React.FC<StorageListProps> = ({ showTitle = true }) => {
         loadError={pvcsError}
         emptyState={
           <EmptyDetailsView
-            title="Start by adding cluster storage"
-            description="Cluster storage saves your project’s data on a selected cluster. You can optionally connect cluster storage to a workbench."
+            title="Start by adding a volume"
+            description="A volume keeps your project’s data across a stop and a start. You can attach a volume to a workbench."
             iconImage={typedEmptyImage(ProjectObjectType.clusterStorage)}
-            imageAlt="add cluster storage"
+            imageAlt="add a volume"
             createButton={
               <Button
                 data-testid="cluster-storage-button"
                 onClick={() => setOpen(true)}
                 variant="primary"
               >
-                Add cluster storage
+                Add volume
               </Button>
             }
           />

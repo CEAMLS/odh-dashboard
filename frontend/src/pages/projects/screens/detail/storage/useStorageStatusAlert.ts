@@ -33,7 +33,7 @@ const useStorageStatusAlert = (pvc: PersistentVolumeClaimKind, percentageFull: n
       if (lastStatus !== currentStatus) {
         if (currentStatus) {
           notification[currentStatus](
-            `Cluster storage "${getDisplayNameFromK8sResource(pvc)}" is ${percentageFull}% full`,
+            `Volume "${getDisplayNameFromK8sResource(pvc)}" is ${percentageFull}% full`,
           );
           const newValue = {
             ...percentageStorageStatuses,

@@ -134,7 +134,7 @@ const StorageTableRow: React.FC<StorageTableRowProps> = ({
                   storageClassConfig?.isEnabled === false && (
                     <Tooltip
                       data-testid="storage-class-deprecated-tooltip"
-                      content="This storage class is deprecated, but the cluster storage is still active."
+                      content="This storage class is deprecated, but the volume is still active."
                     >
                       <Label
                         data-testid="storage-class-deprecated"

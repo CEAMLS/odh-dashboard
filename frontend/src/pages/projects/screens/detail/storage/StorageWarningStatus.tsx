@@ -90,7 +90,7 @@ const StorageWarningStatus: React.FC<StorageWarningStatusProps> = ({
               onAddPVC();
             }}
           >
-            add new cluster storage
+            add a new volume
           </Button>
           .
         </>

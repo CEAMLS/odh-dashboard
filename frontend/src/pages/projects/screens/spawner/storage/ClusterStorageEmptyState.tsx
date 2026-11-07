@@ -6,7 +6,7 @@ export const ClusterStorageEmptyState: React.FC = () => (
   <EmptyState
     titleText={
       <Title headingLevel="h2" size="lg">
-        No cluster storage
+        No volumes
       </Title>
     }
     icon={PlusCircleIcon}
@@ -14,8 +14,8 @@ export const ClusterStorageEmptyState: React.FC = () => (
     data-testid="cluster-storage-empty-state"
   >
     <EmptyStateBody>
-      To save your project&apos;s data, attach cluster storage to your workbench. Your data will not
-      persist without storage.
+      To keep your project&apos;s data, attach a volume to your workbench. Without one, your data
+      does not survive a stop.
     </EmptyStateBody>
   </EmptyState>
 );

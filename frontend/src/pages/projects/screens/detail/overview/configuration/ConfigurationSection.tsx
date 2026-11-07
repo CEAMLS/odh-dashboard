@@ -46,12 +46,11 @@ const ConfigurationSection: React.FC = () => {
         <InfoGalleryItem
           sectionType={SectionType.setup}
           resourceType={ProjectObjectType.clusterStorage}
-          title="Cluster storage"
+          title="Volumes"
           description={
             <Content>
               <Content component="small">
-                To save your project data, you can add cluster storage and optionally connect the
-                storage to a workbench.
+                To keep your project data, add a volume and, if you want, attach it to a workbench.
               </Content>
             </Content>
           }
