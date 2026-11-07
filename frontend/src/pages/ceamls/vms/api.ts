@@ -423,8 +423,12 @@ export const vmUser = (vm: VirtualMachineKind): string =>
 export const vmPassword = (vm: VirtualMachineKind): string | undefined =>
   cloudInitLine(vm, 'password');
 
-export const vmiAddress = (vmi: VirtualMachineInstanceKind | undefined): string | undefined =>
-  vmi?.status?.interfaces?.[0]?.ipAddress;
+/** The address of the pod network interface, which other pods in the project can reach. */
+export const vmiAddress = (vmi: VirtualMachineInstanceKind | undefined): string | undefined => {
+  const interfaces = vmi?.status?.interfaces ?? [];
+  const chosen = interfaces.find((i) => i.name === 'default') ?? interfaces.at(0);
+  return chosen?.ipAddress;
+};
 
 // -- changes --------------------------------------------------------------------
 

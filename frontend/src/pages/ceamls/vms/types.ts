@@ -47,7 +47,7 @@ export type VirtualMachineKind = K8sResourceCommon & {
 export type VirtualMachineInstanceKind = K8sResourceCommon & {
   status?: {
     phase?: string;
-    interfaces?: { ipAddress?: string }[];
+    interfaces?: { name?: string; ipAddress?: string }[];
     guestOSInfo?: { prettyName?: string };
   };
 };

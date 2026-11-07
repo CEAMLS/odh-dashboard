@@ -132,7 +132,7 @@ const SerialConsole: React.FC<Props> = ({ ns, name, running, user }) => {
                 isDisabled={!running}
                 data-testid="ceamls-console-connect"
               >
-                {phase === 'idle' ? 'Connect' : 'Connect again'}
+                {phase === 'idle' || !running ? 'Connect' : 'Connect again'}
               </Button>
             )}
           </FlexItem>

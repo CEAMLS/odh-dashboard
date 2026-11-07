@@ -145,7 +145,9 @@ const VmPage: React.FC = () => {
   const user = vmUser(vm);
   const password = vmPassword(vm);
   const size = sizes.find((s) => s.name === vmSizeName(vm));
-  const address = vmiAddress(vmi);
+  // The watch keeps the last instance after a stop, so read the address
+  // only while the machine runs.
+  const address = running ? vmiAddress(vmi) : undefined;
   const problem = state.tone === 'bad' ? vmProblem(vm) : undefined;
   const sshLine = `virtctl ssh ${user}@vm/${name}/${ns}`;
 
