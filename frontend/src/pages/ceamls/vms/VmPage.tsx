@@ -151,7 +151,7 @@ const VmPage: React.FC = () => {
   // only while the machine runs.
   const address = running ? vmiAddress(vmi) : undefined;
   const problem = state.tone === 'bad' ? vmProblem(vm) : undefined;
-  const sshLine = `virtctl ssh ${user}@vm/${name}/${ns}`;
+  const sshLine = `ceamls vm ssh ${name} -p ${ns}`;
 
   return (
     <ApplicationsPage
@@ -265,8 +265,8 @@ const VmPage: React.FC = () => {
                             {sshLine}
                           </ClipboardCopy>
                           <Content component="small">
-                            Needs <code>oc</code> and <code>virtctl</code> signed in, and your SSH
-                            key in your profile before the machine was made.{' '}
+                            Needs the <code>ceamls</code> command signed in, and your SSH key in
+                            your profile before the machine was made.{' '}
                             <a href={VM_TUTORIAL_URL} target="_blank" rel="noopener noreferrer">
                               How to set them up <ExternalLinkAltIcon />
                             </a>

@@ -39,7 +39,7 @@ import VmStateLabel from './VmState';
 
 export const vmsTitle = 'Virtual machines';
 export const vmsDescription =
-  'Linux machines in the project, with your SSH keys installed at the first boot. Open one in the browser console here, or with virtctl ssh from your computer.';
+  'Linux machines in the project, with your SSH keys installed at the first boot. Open one in the browser console here, or with ceamls vm ssh from your computer.';
 
 /** The size column: the name, or the numbers of a custom size. */
 const sizeText = (vm: VirtualMachineKind, sizes: Size[]): string => {
