@@ -273,13 +273,23 @@ export const useVms = (ns: string): CustomWatchK8sResult<VirtualMachineKind[]> =
     VirtualMachineModel,
   );
 
-/** The SDK gives `{}` for a single object before it arrives; that is "absent". */
+/** True for an object with a metadata.name. The SDK's typing says the data is
+ *  always there, but it is `{}` or `null` before the first read, so the check
+ *  starts from `unknown` and the lint cannot remove it. */
+const named = (x: unknown): boolean => {
+  if (typeof x !== 'object' || x === null) {
+    return false;
+  }
+  const meta: unknown = Reflect.get(x, 'metadata');
+  return typeof meta === 'object' && meta !== null && typeof Reflect.get(meta, 'name') === 'string';
+};
+
+/** The SDK gives `{}` or `null` for a single object before it arrives; that is "absent". */
 const present = <T extends K8sResourceCommon>(
   result: WatchK8sResult<T>,
 ): [T | undefined, boolean, unknown] => {
   const [data, loaded, error] = result;
-  const maybe: T | null | undefined = data;
-  return [maybe.metadata?.name ? maybe : undefined, loaded, error];
+  return [named(data) ? data : undefined, loaded, error];
 };
 
 export const useVm = (
@@ -337,7 +347,7 @@ export type VmState = {
 export const plainProblem = (message: string): string => {
   if (/exceeded quota/.test(message)) {
     if (/requests\.storage/.test(message)) {
-      return 'The project has no disk space left for this machine. Delete a volume or a machine you do not need, or ask for more space.';
+      return 'The project had no disk space left for this machine, and the cluster does not try again. Delete this machine, free disk space (a volume or a machine you do not need) or ask for more, then make it again.';
     }
     return 'The project has no CPU or memory left for this machine. Stop a workbench or a machine, or delete this one and pick a smaller size.';
   }
