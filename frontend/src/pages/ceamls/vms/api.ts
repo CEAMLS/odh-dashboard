@@ -347,7 +347,7 @@ export type VmState = {
 export const plainProblem = (message: string): string => {
   if (/exceeded quota/.test(message)) {
     if (/requests\.storage/.test(message)) {
-      return 'The project had no disk space left for this machine, and the cluster does not try again. Delete this machine, free disk space (a volume or a machine you do not need) or ask for more, then make it again.';
+      return 'The project has no disk space left for this machine. Delete a volume or a machine you do not need, or ask for more space. The cluster tries again every few minutes.';
     }
     return 'The project has no CPU or memory left for this machine. Stop a workbench or a machine, or delete this one and pick a smaller size.';
   }

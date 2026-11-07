@@ -86,9 +86,12 @@ const CreateVmPage: React.FC = () => {
   if (disk === undefined) {
     diskError = `Between ${DISK_MIN} and ${DISK_MAX} GiB.`;
   } else if (room.diskFree !== undefined && diskBytes > room.diskFree) {
-    diskError = `The project has ${formatBytes(
-      room.diskFree,
-    )} of disk space free. Pick a smaller disk, or delete a volume or a machine you do not need.`;
+    diskError =
+      room.diskFree === 0
+        ? 'The project has no disk space free. Delete a volume or a machine you do not need, or ask for more space.'
+        : `The project has ${formatBytes(
+            room.diskFree,
+          )} of disk space free. Pick a smaller disk, or delete a volume or a machine you do not need.`;
   }
   let sizeError: string | undefined;
   if (size && room.cpuFree !== undefined && size.cpu > room.cpuFree) {
