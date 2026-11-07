@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { NavItem } from '@patternfly/react-core';
 import { Link, useMatch } from 'react-router-dom';
+import { ExternalLinkAltIcon } from '@patternfly/react-icons';
 import type {
   HrefNavItemExtension,
   StatusReport,
@@ -32,7 +33,10 @@ export const NavItemHref: React.FC<Props> = ({
   onNotifyStatus,
 }) => {
   const [status, setStatus] = React.useState<StatusReport | undefined>(undefined);
-  const isMatch = !!useMatch(path ?? href);
+  // CEAMLS: an item whose href is an outside address (CEAMLS Chat) is a plain
+  // link in a new tab, not a router Link, and is never the active item.
+  const isExternal = /^https?:\/\//.test(href);
+  const isMatch = !!useMatch(isExternal ? '/__never__' : path ?? href);
 
   React.useEffect(
     () => () => {
@@ -55,14 +59,28 @@ export const NavItemHref: React.FC<Props> = ({
   return (
     <>
       <NavItem isActive={isMatch} onClick={handleClick}>
-        <Link {...dataAttributes} to={href}>
-          <NavItemTitle
-            title={title}
-            navIcon={iconRef ? <NavIcon componentRef={iconRef} /> : null}
-            statusIcon={status ? <StatusReportIcon status={status} isInline /> : null}
-            label={label}
-          />
-        </Link>
+        {isExternal ? (
+          <a {...dataAttributes} href={href} target="_blank" rel="noopener noreferrer">
+            <NavItemTitle
+              title={
+                <>
+                  {title} <ExternalLinkAltIcon />
+                </>
+              }
+              navIcon={iconRef ? <NavIcon componentRef={iconRef} /> : null}
+              label={label}
+            />
+          </a>
+        ) : (
+          <Link {...dataAttributes} to={href}>
+            <NavItemTitle
+              title={title}
+              navIcon={iconRef ? <NavIcon componentRef={iconRef} /> : null}
+              statusIcon={status ? <StatusReportIcon status={status} isInline /> : null}
+              label={label}
+            />
+          </Link>
+        )}
       </NavItem>
       {statusProviderId ? (
         <StatusReportLoader

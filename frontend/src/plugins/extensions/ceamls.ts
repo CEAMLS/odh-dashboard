@@ -6,7 +6,9 @@ import { SupportedArea } from '@odh-dashboard/plugin-core/areas';
 // one group changed there (Projects, which is also the landing page; there is
 // no Home entry). Top-level order, by group, on 3.6:
 //   1 Projects, 2 Workbenches, 3 AI hub, 5 Develop & train, 6 Observe & monitor,
-//   6_x Storage, 7 Learning resources, 8 Applications, 8 Settings
+//   6_x Storage, 7 Learning resources, 7_x CEAMLS Chat, 8 Applications, 8 Settings
+// CEAMLS Chat is an outside address: NavItemHref renders it as a link that
+// opens a new tab (planning/hub_pages.md in the cluster repo, step 1).
 const extensions: (NavExtension | RouteExtension)[] = [
   {
     type: 'app.navigation/href',
@@ -34,6 +36,16 @@ const extensions: (NavExtension | RouteExtension)[] = [
       path: '/storage/*',
       group: '6_x_storage',
       iconRef: () => import('#~/images/icons/StorageNavIcon'),
+    },
+  },
+  {
+    type: 'app.navigation/href',
+    properties: {
+      id: 'ceamls-chat',
+      title: 'CEAMLS Chat',
+      href: 'https://chat.apps.ceamls.morgan.edu/',
+      group: '7_x_chat',
+      iconRef: () => import('#~/images/icons/ChatNavIcon'),
     },
   },
   {
