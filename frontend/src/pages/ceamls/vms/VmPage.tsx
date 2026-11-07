@@ -284,7 +284,8 @@ const VmPage: React.FC = () => {
                           {image?.title ??
                             vm.spec.dataVolumeTemplates?.[0]?.spec.sourceRef?.name ??
                             '—'}
-                          {vmi?.status?.guestOSInfo?.prettyName
+                          {vmi?.status?.guestOSInfo?.prettyName &&
+                          vmi.status.guestOSInfo.prettyName !== image?.title
                             ? ` (${vmi.status.guestOSInfo.prettyName})`
                             : ''}
                         </DescriptionListDescription>

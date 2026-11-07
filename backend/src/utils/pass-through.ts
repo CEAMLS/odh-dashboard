@@ -104,7 +104,19 @@ export const passThroughResource = <
       let parsedData: T | K8sStatus;
 
       try {
-        parsedData = JSON.parse(rawData);
+        // CEAMLS: a subresource action (KubeVirt start, stop, restart) answers
+        // 202 with an empty body. That is a success, not a parse error.
+        parsedData =
+          rawData.trim() === ''
+            ? {
+                kind: 'Status',
+                apiVersion: 'v1',
+                status: 'Success',
+                code: 202,
+                message: '',
+                reason: '',
+              }
+            : JSON.parse(rawData);
       } catch (e) {
         if (rawData.trim() === '404 page not found') {
           // API on k8s doesn't exist, generate a status.

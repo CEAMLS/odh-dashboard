@@ -515,7 +515,8 @@ export const vmAction = async (ns: string, name: string, action: VmAction): Prom
     `/api/k8s/apis/subresources.kubevirt.io/v1/namespaces/${encodeURIComponent(
       ns,
     )}/virtualmachines/${encodeURIComponent(name)}/${action}`,
-    { method: 'PUT', headers: { 'Content-Type': 'application/json' } },
+    // The hub backend refuses a JSON request with no body, so send an empty object.
+    { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: '{}' },
   );
   if (res.status < 400) {
     return;

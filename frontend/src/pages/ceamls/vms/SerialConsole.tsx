@@ -52,6 +52,7 @@ const SerialConsole: React.FC<Props> = ({ ns, name, running, user }) => {
     const f = new FitAddon();
     t.loadAddon(f);
     t.open(holder.current);
+    holder.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     f.fit();
     term.current = t;
     fit.current = f;
