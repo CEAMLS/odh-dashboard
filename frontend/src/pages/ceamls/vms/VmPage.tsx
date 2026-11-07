@@ -336,7 +336,13 @@ const VmPage: React.FC = () => {
                 <Card>
                   <CardTitle>Console</CardTitle>
                   <CardBody>
-                    <SerialConsole ns={ns} name={name} running={running} user={user} />
+                    <SerialConsole
+                      ns={ns}
+                      name={name}
+                      running={running}
+                      starting={state.tone === 'wait'}
+                      user={user}
+                    />
                   </CardBody>
                 </Card>
               </GridItem>

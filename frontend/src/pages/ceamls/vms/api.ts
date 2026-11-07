@@ -196,7 +196,8 @@ export const useRoom = (ns: string): Room => {
         } else if (key === 'requests.cpu') {
           const total = cpuCores(hard[key]);
           room.cpuTotal = total;
-          room.cpuFree = Math.max(0, total - cpuCores(used[key] ?? '0'));
+          // Whole CPUs: a machine cannot take a fraction.
+          room.cpuFree = Math.max(0, Math.floor(total - cpuCores(used[key] ?? '0')));
         } else if (key === 'requests.memory') {
           const total = memoryBytesOf(hard[key]);
           room.memoryTotal = total;

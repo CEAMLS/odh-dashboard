@@ -12,14 +12,16 @@ import { consoleSocketUrl } from './api';
 type Props = {
   ns: string;
   name: string;
-  /** The machine runs; the console can connect. */
+  /** The machine runs and its OS is up; the console can connect. */
   running: boolean;
+  /** The machine is on its way up; Connect waits. */
+  starting?: boolean;
   user: string;
 };
 
 type Phase = 'idle' | 'connecting' | 'open' | 'closed' | 'failed';
 
-const SerialConsole: React.FC<Props> = ({ ns, name, running, user }) => {
+const SerialConsole: React.FC<Props> = ({ ns, name, running, starting = false, user }) => {
   const holder = React.useRef<HTMLDivElement>(null);
   const term = React.useRef<Terminal | null>(null);
   const fit = React.useRef<FitAddon | null>(null);
@@ -179,6 +181,8 @@ const SerialConsole: React.FC<Props> = ({ ns, name, running, user }) => {
             <Content component="small">
               {running
                 ? `Sign in as ${user} with the password above. The console works when SSH does not.`
+                : starting
+                ? 'Connect opens when the OS is up.'
                 : 'Start the machine to use the console.'}
             </Content>
           </FlexItem>
