@@ -211,6 +211,19 @@ const extensions: (
       component: () => import('../app/AIAssets/AIAssetsModelsTab').then((m) => m.default),
     },
   },
+  {
+    // CEAMLS: how a program calls a gateway model (base URL, key, samples
+    // in Python, curl and JavaScript), beside the Models tab.
+    type: 'gen-ai.ai-assets/tab',
+    flags: {
+      required: [PLUGIN_GEN_AI],
+    },
+    properties: {
+      id: 'api-access',
+      title: 'API access',
+      component: () => import('../app/AIAssets/AIAssetsApiAccessTab').then((m) => m.default),
+    },
+  },
   // CEAMLS: the "MCP servers" tab is not registered. The cluster has no MCP
   // servers and the tab only showed an empty state.
   {
