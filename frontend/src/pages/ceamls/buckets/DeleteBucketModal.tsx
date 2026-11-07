@@ -25,7 +25,9 @@ const describe = (bucket: string, usage: Usage | undefined): string => {
     return `The empty bucket ${bucket} is deleted.`;
   }
   if (usage.complete) {
-    return `The bucket ${bucket} and its ${usage.objects.toLocaleString()} objects (${formatBytes(
+    const n =
+      usage.objects === 1 ? 'its 1 object' : `its ${usage.objects.toLocaleString()} objects`;
+    return `The bucket ${bucket} and ${n} (${formatBytes(
       usage.bytes,
     )}) are deleted. This cannot be undone.`;
   }

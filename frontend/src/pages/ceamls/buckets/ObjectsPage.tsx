@@ -195,7 +195,8 @@ const uploadTitle = (u: UploadState): string => {
   if (u.errors.length) {
     return `${u.errors.length} of ${u.total} files failed`;
   }
-  return `${u.total - u.skipped} files uploaded`;
+  const n = u.total - u.skipped;
+  return n === 1 ? '1 file uploaded' : `${n} files uploaded`;
 };
 
 const uploadVariant = (u: UploadState): 'info' | 'danger' | 'success' => {
