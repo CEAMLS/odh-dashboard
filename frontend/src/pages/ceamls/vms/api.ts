@@ -965,7 +965,10 @@ export const snapshotState = (s: VirtualMachineSnapshotKind): SnapshotState => {
 
 /** The default name: the machine and the date, with a number when the date is taken. */
 export const defaultSnapshotName = (vm: string, taken: string[]): string => {
-  const date = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  // The local date, as the person sees it, not the UTC one.
+  const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   const base = `${vm}-${date}`;
   if (!taken.includes(base)) {
     return base;
