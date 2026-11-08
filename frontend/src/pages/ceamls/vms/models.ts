@@ -42,3 +42,24 @@ export const ResourceQuotaModel: K8sModelCommon = {
   kind: 'ResourceQuota',
   plural: 'resourcequotas',
 };
+
+export const DataVolumeModel: K8sModelCommon = {
+  apiVersion: 'v1beta1',
+  apiGroup: 'cdi.kubevirt.io',
+  kind: 'DataVolume',
+  plural: 'datavolumes',
+};
+
+export const VirtualMachineSnapshotModel: K8sModelCommon = {
+  apiVersion: 'v1beta1',
+  apiGroup: 'snapshot.kubevirt.io',
+  kind: 'VirtualMachineSnapshot',
+  plural: 'virtualmachinesnapshots',
+};
+
+export const VirtualMachineRestoreModel: K8sModelCommon = {
+  apiVersion: 'v1beta1',
+  apiGroup: 'snapshot.kubevirt.io',
+  kind: 'VirtualMachineRestore',
+  plural: 'virtualmachinerestores',
+};

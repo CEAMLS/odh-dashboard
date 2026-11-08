@@ -18,11 +18,23 @@ type Props = {
   /** The machine is on its way up; Connect waits. */
   starting?: boolean;
   user: string;
+  /** Connect as soon as the machine runs (the console page in its own tab). */
+  autoConnect?: boolean;
+  /** Fill the window instead of a fixed height. */
+  tall?: boolean;
 };
 
 type Phase = 'idle' | 'connecting' | 'open' | 'closed' | 'failed';
 
-const SerialConsole: React.FC<Props> = ({ ns, name, running, starting = false, user }) => {
+const SerialConsole: React.FC<Props> = ({
+  ns,
+  name,
+  running,
+  starting = false,
+  user,
+  autoConnect = false,
+  tall = false,
+}) => {
   const holder = React.useRef<HTMLDivElement>(null);
   const term = React.useRef<Terminal | null>(null);
   const fit = React.useRef<FitAddon | null>(null);
@@ -111,6 +123,15 @@ const SerialConsole: React.FC<Props> = ({ ns, name, running, starting = false, u
   }, [disconnect, ns, name]);
 
   React.useEffect(() => () => disconnect(), [disconnect]);
+
+  // The console page connects by itself once, when the machine runs.
+  const autoDone = React.useRef(false);
+  React.useEffect(() => {
+    if (autoConnect && running && !autoDone.current) {
+      autoDone.current = true;
+      connect();
+    }
+  }, [autoConnect, running, connect]);
 
   React.useEffect(() => {
     if (!holder.current) {
@@ -244,7 +265,8 @@ const SerialConsole: React.FC<Props> = ({ ns, name, running, starting = false, u
           ref={holder}
           data-testid="ceamls-console"
           style={{
-            height: live ? 420 : 0,
+            height: live ? (tall ? 'calc(100vh - 290px)' : 420) : 0,
+            minHeight: live && tall ? 320 : undefined,
             overflow: 'hidden',
             borderRadius: 6,
             background: '#061a3a',

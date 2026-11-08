@@ -76,3 +76,69 @@ export type ResourceQuotaKind = K8sResourceCommon & {
     used?: Record<string, string>;
   };
 };
+
+/** The disk copy that makes a machine's disk from an image. */
+export type DataVolumeKind = K8sResourceCommon & {
+  status?: {
+    phase?: string;
+    /** "43.21%" while the copy runs. */
+    progress?: string;
+    conditions?: K8sCondition[];
+  };
+};
+
+export type EventKind = K8sResourceCommon & {
+  type?: string;
+  reason?: string;
+  message?: string;
+  count?: number;
+  firstTimestamp?: string;
+  lastTimestamp?: string;
+  eventTime?: string;
+  involvedObject: { kind?: string; name?: string };
+  source?: { component?: string };
+};
+
+export type VirtualMachineSnapshotKind = K8sResourceCommon & {
+  spec: {
+    source: { apiGroup?: string; kind: string; name: string };
+    deletionPolicy?: string;
+    failureDeadline?: string;
+  };
+  status?: {
+    readyToUse?: boolean;
+    phase?: string;
+    creationTime?: string;
+    error?: { time?: string; message?: string };
+    indications?: string[];
+    conditions?: K8sCondition[];
+  };
+};
+
+export type VirtualMachineRestoreKind = K8sResourceCommon & {
+  spec: {
+    target: { apiGroup?: string; kind: string; name: string };
+    virtualMachineSnapshotName: string;
+  };
+  status?: {
+    complete?: boolean;
+    restoreTime?: string;
+    conditions?: K8sCondition[];
+  };
+};
+
+/** What the guest agent reports about the OS (the guestosinfo subresource). */
+export type GuestOsInfo = {
+  guestAgentVersion?: string;
+  hostname?: string;
+  os?: { name?: string; prettyName?: string; version?: string; kernelRelease?: string };
+};
+
+/** The file systems inside the machine (the filesystemlist subresource). */
+export type GuestFilesystem = {
+  diskName: string;
+  mountPoint: string;
+  fileSystemType: string;
+  usedBytes: number;
+  totalBytes: number;
+};

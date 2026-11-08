@@ -1,5 +1,6 @@
-// CEAMLS: one machine: its state, how to connect, the details, the serial
-// console, and the actions.
+// CEAMLS: one machine: its state, how to connect, the details, what it
+// uses, the serial console, its activity, its snapshots, and the actions.
+// The second version (planning/vm_pages.md section 10 in the cluster repo).
 import * as React from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
@@ -27,17 +28,26 @@ import {
   PageSection,
   TextInput,
   Timestamp,
+  Tooltip,
 } from '@patternfly/react-core';
 import { CopyIcon, EyeIcon, EyeSlashIcon, ExternalLinkAltIcon } from '@patternfly/react-icons';
 import { ApplicationsPage } from '@odh-dashboard/ui-core';
 import { ProjectDetailsContext } from '#~/pages/projects/ProjectDetailsContext';
-import { vmsRoute } from '#~/pages/ceamls/routes';
+import { vmConsoleRoute, vmsRoute } from '#~/pages/ceamls/routes';
 import { ConfirmDeleteModal, Loading } from '#~/pages/ceamls/buckets/common';
 import {
   VM_TUTORIAL_URL,
+  agentUp,
+  copyProgress,
   deleteVm,
+  diskUseLine,
   errorMessage,
   formatMemory,
+  memoryBytesOf,
+  rootFilesystem,
+  useDataVolume,
+  useFilesystems,
+  useGuestOsInfo,
   useSizes,
   useVm,
   useVmi,
@@ -53,7 +63,11 @@ import {
   vmUser,
   vmiAddress,
 } from './api';
+import ActivityCard from './ActivityCard';
+import BootLog from './BootLog';
 import SerialConsole from './SerialConsole';
+import SnapshotsCard from './SnapshotsCard';
+import UsageCard from './UsageCard';
 import VmStateLabel from './VmState';
 
 const Password: React.FC<{ value: string }> = ({ value }) => {
@@ -103,9 +117,17 @@ const VmPage: React.FC = () => {
   const [error, setError] = React.useState<string | undefined>(undefined);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [acting, setActing] = React.useState(false);
+  const [restoring, setRestoring] = React.useState(false);
 
   const state = vmState(vm, vmi);
   const running = state.tone === 'ok';
+  const starting = state.tone === 'wait';
+  // What the guest agent knows: only while the OS is up.
+  const guestReady = running && agentUp(vmi);
+  const [guest] = useGuestOsInfo(ns, name, guestReady);
+  const [filesystems] = useFilesystems(ns, name, guestReady);
+  const [dataVolume] = useDataVolume(ns, name);
+  const progress = starting ? copyProgress(dataVolume) : undefined;
   const act = (action: 'start' | 'stop' | 'restart') => {
     setActing(true);
     setError(undefined);
@@ -160,7 +182,9 @@ const VmPage: React.FC = () => {
           <FlexItem>{name}</FlexItem>
           <FlexItem>
             <Content component="p" className="pf-v6-u-font-size-md pf-v6-u-font-weight-normal">
-              <VmStateLabel state={state} />
+              <VmStateLabel
+                state={restoring ? { word: 'Restoring', tone: 'wait', busy: true } : state}
+              />
             </Content>
           </FlexItem>
         </Flex>
@@ -170,13 +194,43 @@ const VmPage: React.FC = () => {
       empty={false}
       headerAction={
         <Flex gap={{ default: 'gapSm' }}>
+          <FlexItem>
+            {running ? (
+              <Button
+                variant="primary"
+                component="a"
+                href={vmConsoleRoute(ns, name)}
+                target="_blank"
+                rel="noopener noreferrer"
+                icon={<ExternalLinkAltIcon />}
+                iconPosition="end"
+                data-testid="ceamls-vm-connect"
+              >
+                Connect
+              </Button>
+            ) : (
+              <Tooltip
+                content={starting ? 'Ready when the OS is up.' : 'Start the machine to connect.'}
+              >
+                <Button
+                  variant="primary"
+                  isAriaDisabled
+                  icon={<ExternalLinkAltIcon />}
+                  iconPosition="end"
+                  data-testid="ceamls-vm-connect"
+                >
+                  Connect
+                </Button>
+              </Tooltip>
+            )}
+          </FlexItem>
           {state.tone === 'ok' || state.tone === 'wait' ? (
             <>
               <FlexItem>
                 <Button
                   variant="secondary"
                   onClick={() => act('restart')}
-                  isDisabled={acting || state.busy}
+                  isDisabled={acting || state.busy || restoring}
                   data-testid="ceamls-vm-restart"
                 >
                   Restart
@@ -186,7 +240,7 @@ const VmPage: React.FC = () => {
                 <Button
                   variant="secondary"
                   onClick={() => act('stop')}
-                  isDisabled={acting}
+                  isDisabled={acting || restoring}
                   data-testid="ceamls-vm-stop"
                 >
                   Stop
@@ -198,7 +252,7 @@ const VmPage: React.FC = () => {
               <Button
                 variant="primary"
                 onClick={() => act('start')}
-                isDisabled={acting}
+                isDisabled={acting || restoring}
                 data-testid="ceamls-vm-start"
               >
                 Start
@@ -210,7 +264,7 @@ const VmPage: React.FC = () => {
               variant="secondary"
               isDanger
               onClick={() => setConfirmDelete(true)}
-              isDisabled={acting}
+              isDisabled={acting || restoring}
               data-testid="ceamls-vm-delete"
             >
               Delete
@@ -232,6 +286,19 @@ const VmPage: React.FC = () => {
             <FlexItem>
               <Alert variant="warning" isInline title="The machine is not running">
                 {problem}
+              </Alert>
+            </FlexItem>
+          )}
+          {progress && (
+            <FlexItem>
+              <Alert
+                variant="info"
+                isInline
+                isPlain
+                title={progress}
+                data-testid="ceamls-vm-progress"
+              >
+                The first start copies the image. Later starts take seconds.
               </Alert>
             </FlexItem>
           )}
@@ -288,10 +355,26 @@ const VmPage: React.FC = () => {
                           {image?.title ??
                             vm.spec.dataVolumeTemplates?.[0]?.spec.sourceRef?.name ??
                             '—'}
-                          {vmi?.status?.guestOSInfo?.prettyName &&
-                          vmi.status.guestOSInfo.prettyName !== image?.title
-                            ? ` (${vmi.status.guestOSInfo.prettyName})`
-                            : ''}
+                        </DescriptionListDescription>
+                      </DescriptionListGroup>
+                      <DescriptionListGroup>
+                        <DescriptionListTerm>Operating system</DescriptionListTerm>
+                        <DescriptionListDescription data-testid="ceamls-vm-os">
+                          {guest?.os?.prettyName ??
+                            vmi?.status?.guestOSInfo?.prettyName ??
+                            (running ? 'Waiting for the machine' : '—')}
+                        </DescriptionListDescription>
+                      </DescriptionListGroup>
+                      <DescriptionListGroup>
+                        <DescriptionListTerm>Hostname</DescriptionListTerm>
+                        <DescriptionListDescription>
+                          {guest?.hostname ? (
+                            <code>{guest.hostname}</code>
+                          ) : running ? (
+                            'Waiting for the machine'
+                          ) : (
+                            '—'
+                          )}
                         </DescriptionListDescription>
                       </DescriptionListGroup>
                       <DescriptionListGroup>
@@ -302,8 +385,15 @@ const VmPage: React.FC = () => {
                       </DescriptionListGroup>
                       <DescriptionListGroup>
                         <DescriptionListTerm>Disk</DescriptionListTerm>
-                        <DescriptionListDescription>
-                          {vmDisk(vm) ? formatMemory(vmDisk(vm)) : '—'}
+                        <DescriptionListDescription data-testid="ceamls-vm-disk">
+                          {(() => {
+                            const root = rootFilesystem(filesystems);
+                            if (root) {
+                              return diskUseLine(root);
+                            }
+                            const diskSize = vmDisk(vm) ? formatMemory(vmDisk(vm)) : '—';
+                            return running ? `${diskSize}, use not known yet` : diskSize;
+                          })()}
                         </DescriptionListDescription>
                       </DescriptionListGroup>
                       <DescriptionListGroup>
@@ -333,18 +423,40 @@ const VmPage: React.FC = () => {
                 </Card>
               </GridItem>
               <GridItem span={12}>
+                <UsageCard
+                  ns={ns}
+                  name={name}
+                  running={running}
+                  cpus={size?.cpu}
+                  memoryBytes={size ? memoryBytesOf(size.memory) : undefined}
+                />
+              </GridItem>
+              <GridItem span={12}>
                 <Card>
                   <CardTitle>Console</CardTitle>
                   <CardBody>
-                    <SerialConsole
-                      ns={ns}
-                      name={name}
-                      running={running}
-                      starting={state.tone === 'wait'}
-                      user={user}
-                    />
+                    <Flex direction={{ default: 'column' }} gap={{ default: 'gapMd' }}>
+                      <FlexItem>
+                        <SerialConsole
+                          ns={ns}
+                          name={name}
+                          running={running}
+                          starting={starting}
+                          user={user}
+                        />
+                      </FlexItem>
+                      <FlexItem>
+                        <BootLog ns={ns} name={name} active={running || starting} />
+                      </FlexItem>
+                    </Flex>
                   </CardBody>
                 </Card>
+              </GridItem>
+              <GridItem span={12}>
+                <ActivityCard ns={ns} name={name} openAtFirst={!running} />
+              </GridItem>
+              <GridItem span={12}>
+                <SnapshotsCard ns={ns} vm={name} running={running} onRestoring={setRestoring} />
               </GridItem>
             </Grid>
           </FlexItem>

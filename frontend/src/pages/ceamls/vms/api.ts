@@ -6,27 +6,38 @@ import * as React from 'react';
 import {
   k8sCreateResource,
   k8sDeleteResource,
+  k8sGetResource,
   useK8sWatchResource,
 } from '@openshift/dynamic-plugin-sdk-utils';
 import type { K8sResourceCommon, WatchK8sResult } from '@openshift/dynamic-plugin-sdk-utils';
 import { K8sStatusError, isK8sStatus } from '@odh-dashboard/k8s-core';
 import { groupVersionKind } from '#~/api/k8sUtils';
+import { EventModel, PodModel } from '#~/api/models';
 import useK8sWatchResourceList from '#~/utilities/useK8sWatchResourceList';
 import type { CustomWatchK8sResult } from '#~/types';
 import {
   ClusterInstancetypeModel,
   DataSourceModel,
+  DataVolumeModel,
   InstancetypeModel,
   ResourceQuotaModel,
   VirtualMachineInstanceModel,
   VirtualMachineModel,
+  VirtualMachineRestoreModel,
+  VirtualMachineSnapshotModel,
 } from './models';
 import type {
   DataSourceKind,
+  DataVolumeKind,
+  EventKind,
+  GuestFilesystem,
+  GuestOsInfo,
   InstancetypeKind,
   ResourceQuotaKind,
   VirtualMachineInstanceKind,
   VirtualMachineKind,
+  VirtualMachineRestoreKind,
+  VirtualMachineSnapshotKind,
 } from './types';
 
 // -- the curated menu ---------------------------------------------------------
@@ -644,3 +655,430 @@ export const errorMessage = (e: unknown): string => {
 /** The address of the researcher docs. */
 export const VM_TUTORIAL_URL =
   'https://console.apps.ceamls.morgan.edu/docs/tutorials/04-create-a-vm/';
+
+// -- the second version: usage, activity, the guest, snapshots -----------------
+// planning/vm_pages.md section 10 in the cluster repo.
+
+const subresourceUrl = (ns: string, name: string, sub: string): string =>
+  `/api/k8s/apis/subresources.kubevirt.io/v1/namespaces/${encodeURIComponent(
+    ns,
+  )}/virtualmachineinstances/${encodeURIComponent(name)}/${sub}`;
+
+const readJson = async <T>(url: string): Promise<T> => {
+  const res = await fetch(url);
+  if (res.status >= 400) {
+    let body: unknown;
+    try {
+      body = await res.json();
+    } catch {
+      body = undefined;
+    }
+    if (isK8sStatus(body)) {
+      throw new K8sStatusError(body);
+    }
+    throw new Error(`The request failed (${res.status})`);
+  }
+  const body: T = await res.json();
+  return body;
+};
+
+/** What the guest agent says about the OS; needs the agent. */
+export const fetchGuestOsInfo = (ns: string, name: string): Promise<GuestOsInfo> =>
+  readJson<GuestOsInfo>(subresourceUrl(ns, name, 'guestosinfo'));
+
+/** The file systems in the machine; needs the agent. */
+export const fetchFilesystems = async (ns: string, name: string): Promise<GuestFilesystem[]> => {
+  const r = await readJson<{ items?: GuestFilesystem[] }>(
+    subresourceUrl(ns, name, 'filesystemlist'),
+  );
+  return r.items ?? [];
+};
+
+/** Reads something the guest agent reports, again each time `tick` changes. */
+const useGuestRead = <T>(
+  active: boolean,
+  read: () => Promise<T>,
+  tick: number,
+): [T | undefined, boolean, string | undefined] => {
+  const [value, setValue] = React.useState<T | undefined>(undefined);
+  const [loaded, setLoaded] = React.useState(false);
+  const [error, setError] = React.useState<string | undefined>(undefined);
+  React.useEffect(() => {
+    if (!active) {
+      setValue(undefined);
+      setLoaded(false);
+      return undefined;
+    }
+    let live = true;
+    read()
+      .then((v) => {
+        if (live) {
+          setValue(v);
+          setError(undefined);
+        }
+      })
+      .catch((e: unknown) => {
+        if (live) {
+          setError(errorMessage(e));
+        }
+      })
+      .finally(() => {
+        if (live) {
+          setLoaded(true);
+        }
+      });
+    return () => {
+      live = false;
+    };
+  }, [active, read, tick]);
+  return [value, loaded, error];
+};
+
+/** A counter that goes up every `ms` while `active`, to re-read something. */
+export const useTick = (active: boolean, ms: number): number => {
+  const [tick, setTick] = React.useState(0);
+  React.useEffect(() => {
+    if (!active) {
+      return undefined;
+    }
+    const id = setInterval(() => setTick((t) => t + 1), ms);
+    return () => clearInterval(id);
+  }, [active, ms]);
+  return tick;
+};
+
+export const useGuestOsInfo = (
+  ns: string,
+  name: string,
+  active: boolean,
+): [GuestOsInfo | undefined, boolean, string | undefined] => {
+  const read = React.useCallback(() => fetchGuestOsInfo(ns, name), [ns, name]);
+  return useGuestRead(active, read, 0);
+};
+
+/** The file systems, read again every minute: the used space moves. */
+export const useFilesystems = (
+  ns: string,
+  name: string,
+  active: boolean,
+): [GuestFilesystem[] | undefined, boolean, string | undefined] => {
+  const read = React.useCallback(() => fetchFilesystems(ns, name), [ns, name]);
+  return useGuestRead(active, read, useTick(active, 60_000));
+};
+
+/** The root file system, or the biggest one. */
+export const rootFilesystem = (fs: GuestFilesystem[] | undefined): GuestFilesystem | undefined =>
+  fs?.find((f) => f.mountPoint === '/') ??
+  fs?.filter((f) => f.totalBytes > 0).toSorted((a, b) => b.totalBytes - a.totalBytes)[0];
+
+/** "30 GiB, 8.1 GiB used (27 %)". */
+export const diskUseLine = (f: GuestFilesystem): string =>
+  `${formatBytes(f.totalBytes)}, ${formatBytes(f.usedBytes)} used (${Math.round(
+    (f.usedBytes / f.totalBytes) * 100,
+  )} %)`;
+
+/** The disk copy of the machine (the DataVolume has the machine's name). */
+export const useDataVolume = (
+  ns: string,
+  name: string,
+): [DataVolumeKind | undefined, boolean, unknown] =>
+  present(
+    useK8sWatchResource<DataVolumeKind>(
+      React.useMemo(
+        () => ({
+          isList: false,
+          groupVersionKind: groupVersionKind(DataVolumeModel),
+          namespace: ns,
+          name,
+        }),
+        [ns, name],
+      ),
+      DataVolumeModel,
+    ),
+  );
+
+/** "Copying the image to the disk, 43 %" while the copy runs, else undefined. */
+export const copyProgress = (dv: DataVolumeKind | undefined): string | undefined => {
+  const phase = dv?.status?.phase;
+  if (!phase || phase === 'Succeeded') {
+    return undefined;
+  }
+  const pct = Number.parseFloat(dv.status?.progress ?? '');
+  if (
+    phase === 'ImportInProgress' ||
+    phase === 'CloneInProgress' ||
+    phase === 'CSICloneInProgress'
+  ) {
+    return Number.isFinite(pct)
+      ? `Copying the image to the disk, ${Math.round(pct)} %`
+      : 'Copying the image to the disk';
+  }
+  if (phase === 'Pending' || phase === 'PendingPopulation' || phase === 'WaitForFirstConsumer') {
+    return 'Waiting for disk space';
+  }
+  if (phase === 'Failed') {
+    return undefined;
+  }
+  return 'Preparing the disk';
+};
+
+/** The events about the machine: the VM, its instance and its disk share the name. */
+export const useVmEvents = (ns: string, name: string): CustomWatchK8sResult<EventKind[]> =>
+  useK8sWatchResourceList<EventKind[]>(
+    React.useMemo(
+      () => ({
+        isList: true,
+        groupVersionKind: groupVersionKind(EventModel),
+        namespace: ns,
+        fieldSelector: `involvedObject.name=${name}`,
+      }),
+      [ns, name],
+    ),
+    EventModel,
+  );
+
+export const eventTime = (e: EventKind): string | undefined =>
+  e.lastTimestamp ?? e.eventTime ?? e.firstTimestamp ?? e.metadata?.creationTimestamp;
+
+/** Newest first. */
+export const sortEvents = (events: EventKind[]): EventKind[] =>
+  events.toSorted((a, b) => Date.parse(eventTime(b) ?? '') - Date.parse(eventTime(a) ?? ''));
+
+/** The pod that runs the machine, by its label. */
+export const useLauncherPod = (ns: string, name: string, active: boolean): string | undefined => {
+  const [pods] = useK8sWatchResourceList<K8sResourceCommon[]>(
+    React.useMemo(
+      () =>
+        active
+          ? {
+              isList: true,
+              groupVersionKind: groupVersionKind(PodModel),
+              namespace: ns,
+              selector: {
+                matchLabels: { 'kubevirt.io': 'virt-launcher', 'vm.kubevirt.io/name': name },
+              },
+            }
+          : null,
+      [ns, name, active],
+    ),
+    PodModel,
+  );
+  // The newest pod: a restart leaves the old one for a moment.
+  return pods
+    .toSorted(
+      (a, b) =>
+        Date.parse(b.metadata?.creationTimestamp ?? '') -
+        Date.parse(a.metadata?.creationTimestamp ?? ''),
+    )
+    .at(0)?.metadata?.name;
+};
+
+/** The last lines of the machine's serial output, from the launcher pod. */
+export const fetchBootLog = async (ns: string, pod: string, lines = 200): Promise<string> => {
+  const res = await fetch(
+    `/api/k8s/api/v1/namespaces/${encodeURIComponent(ns)}/pods/${encodeURIComponent(
+      pod,
+    )}/log?container=guest-console-log&tailLines=${lines}`,
+  );
+  if (res.status >= 400) {
+    throw new Error(`The boot log could not be read (${res.status})`);
+  }
+  // The hub proxy may wrap a text answer in JSON; take either.
+  const text = await res.text();
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return typeof parsed === 'string' ? parsed : text;
+  } catch {
+    return text;
+  }
+};
+
+// -- snapshots --------------------------------------------------------------------
+
+/** How many snapshots a machine may have. */
+export const SNAPSHOT_CAP = 5;
+
+export const SNAPSHOT_NOTE = 'ceamls.morgan.edu/note';
+
+export const useSnapshots = (
+  ns: string,
+  name: string,
+): [VirtualMachineSnapshotKind[], boolean, Error | undefined] => {
+  const [all, loaded, error] = useK8sWatchResourceList<VirtualMachineSnapshotKind[]>(
+    React.useMemo(
+      () => ({
+        isList: true,
+        groupVersionKind: groupVersionKind(VirtualMachineSnapshotModel),
+        namespace: ns,
+      }),
+      [ns],
+    ),
+    VirtualMachineSnapshotModel,
+  );
+  const own = React.useMemo(
+    () =>
+      all
+        .filter((s) => s.spec.source.name === name)
+        .toSorted(
+          (a, b) =>
+            Date.parse(b.metadata?.creationTimestamp ?? '') -
+            Date.parse(a.metadata?.creationTimestamp ?? ''),
+        ),
+    [all, name],
+  );
+  return [own, loaded, error];
+};
+
+export const useRestores = (
+  ns: string,
+  name: string,
+): [VirtualMachineRestoreKind[], boolean, Error | undefined] => {
+  const [all, loaded, error] = useK8sWatchResourceList<VirtualMachineRestoreKind[]>(
+    React.useMemo(
+      () => ({
+        isList: true,
+        groupVersionKind: groupVersionKind(VirtualMachineRestoreModel),
+        namespace: ns,
+      }),
+      [ns],
+    ),
+    VirtualMachineRestoreModel,
+  );
+  const own = React.useMemo(() => all.filter((r) => r.spec.target.name === name), [all, name]);
+  return [own, loaded, error];
+};
+
+export type SnapshotState = { word: string; tone: StateTone; detail?: string };
+
+export const snapshotState = (s: VirtualMachineSnapshotKind): SnapshotState => {
+  if (s.status?.readyToUse) {
+    return { word: 'Ready', tone: 'ok' };
+  }
+  if (s.status?.phase === 'Failed' || s.status?.error) {
+    return { word: 'Failed', tone: 'bad', detail: s.status.error?.message };
+  }
+  if (s.metadata?.deletionTimestamp) {
+    return { word: 'Deleting', tone: 'wait' };
+  }
+  return { word: 'Taking', tone: 'wait' };
+};
+
+/** The default name: the machine and the date, with a number when the date is taken. */
+export const defaultSnapshotName = (vm: string, taken: string[]): string => {
+  const date = new Date().toISOString().slice(0, 10);
+  const base = `${vm}-${date}`;
+  if (!taken.includes(base)) {
+    return base;
+  }
+  let n = 2;
+  while (taken.includes(`${base}-${n}`)) {
+    n += 1;
+  }
+  return `${base}-${n}`;
+};
+
+export const createSnapshot = (
+  ns: string,
+  vm: string,
+  name: string,
+  note: string,
+): Promise<VirtualMachineSnapshotKind> =>
+  k8sCreateResource<VirtualMachineSnapshotKind>({
+    model: VirtualMachineSnapshotModel,
+    resource: {
+      apiVersion: 'snapshot.kubevirt.io/v1beta1',
+      kind: 'VirtualMachineSnapshot',
+      metadata: {
+        name,
+        namespace: ns,
+        labels: { 'app.kubernetes.io/managed-by': 'ceamls-hub' },
+        ...(note.trim() ? { annotations: { [SNAPSHOT_NOTE]: note.trim() } } : {}),
+      },
+      spec: {
+        source: { apiGroup: 'kubevirt.io', kind: 'VirtualMachine', name: vm },
+        // A copy that does not finish in an hour is a failed one, not a hang.
+        failureDeadline: '1h',
+      },
+    },
+  });
+
+export const deleteSnapshot = (ns: string, name: string): Promise<unknown> =>
+  k8sDeleteResource({ model: VirtualMachineSnapshotModel, queryOptions: { name, ns } });
+
+const sleep = (ms: number) =>
+  new Promise<void>((r) => {
+    setTimeout(r, ms);
+  });
+
+const getVm = (ns: string, name: string): Promise<VirtualMachineKind> =>
+  k8sGetResource<VirtualMachineKind>({ model: VirtualMachineModel, queryOptions: { name, ns } });
+
+/** Waits until the machine is stopped (no instance), two minutes at most. */
+const waitStopped = async (ns: string, name: string): Promise<void> => {
+  for (let i = 0; i < 60; i += 1) {
+    const vm = await getVm(ns, name);
+    if (vm.status?.printableStatus === 'Stopped') {
+      return;
+    }
+    await sleep(2000);
+  }
+  throw new Error('The machine did not stop in two minutes. Try again.');
+};
+
+/**
+ * Puts the disk back to a snapshot: stops the machine, restores, starts it
+ * again. The restore itself can only run on a stopped machine. The restore
+ * object stays, so the Activity and the state can show what happened.
+ */
+export const restoreSnapshot = async (
+  ns: string,
+  vm: string,
+  snapshot: string,
+  wasRunning: boolean,
+): Promise<void> => {
+  if (wasRunning) {
+    await vmAction(ns, vm, 'stop');
+    await waitStopped(ns, vm);
+  }
+  const restore = await k8sCreateResource<VirtualMachineRestoreKind>({
+    model: VirtualMachineRestoreModel,
+    resource: {
+      apiVersion: 'snapshot.kubevirt.io/v1beta1',
+      kind: 'VirtualMachineRestore',
+      metadata: {
+        generateName: `${vm}-restore-`,
+        namespace: ns,
+        labels: { 'app.kubernetes.io/managed-by': 'ceamls-hub' },
+      },
+      spec: {
+        target: { apiGroup: 'kubevirt.io', kind: 'VirtualMachine', name: vm },
+        virtualMachineSnapshotName: snapshot,
+      },
+    },
+  });
+  const restoreName = restore.metadata?.name ?? '';
+  for (let i = 0; i < 90; i += 1) {
+    const r = await k8sGetResource<VirtualMachineRestoreKind>({
+      model: VirtualMachineRestoreModel,
+      queryOptions: { name: restoreName, ns },
+    });
+    if (r.status?.complete) {
+      break;
+    }
+    const failed = r.status?.conditions?.find((c) => c.type === 'Ready' && c.status === 'False');
+    if (i === 89) {
+      throw new Error(
+        `The restore did not finish in three minutes. ${failed?.message ?? 'Check the Activity.'}`,
+      );
+    }
+    await sleep(2000);
+  }
+  if (wasRunning) {
+    await vmAction(ns, vm, 'start');
+  }
+};
+
+/** A restore that is still running, if any. */
+export const activeRestore = (
+  restores: VirtualMachineRestoreKind[],
+): VirtualMachineRestoreKind | undefined => restores.find((r) => !r.status?.complete);

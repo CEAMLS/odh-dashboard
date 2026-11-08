@@ -29,3 +29,7 @@ export const createVmRoute = (namespace: string): string => `${vmsRoute(namespac
 
 export const vmRoute = (namespace: string, name: string): string =>
   `${vmsRoute(namespace)}/${encodeURIComponent(name)}`;
+
+/** The machine's console alone, for a new tab. */
+export const vmConsoleRoute = (namespace: string, name: string): string =>
+  `${vmRoute(namespace, name)}/console`;
