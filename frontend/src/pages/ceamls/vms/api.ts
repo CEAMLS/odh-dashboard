@@ -887,7 +887,12 @@ export const fetchBootLog = async (ns: string, pod: string, lines = 200): Promis
   if (res.status >= 400) {
     throw new Error(`The boot log could not be read (${res.status})`);
   }
-  return res.text();
+  // The serial port carries terminal control codes (colors, cursor moves).
+  // A read-only box shows the words only.
+  const esc = String.fromCharCode(27);
+  const csi = new RegExp(`${esc}\\[[0-9;?]*[ -/]*[@-~]`, 'g');
+  const other = new RegExp(`${esc}[^[]`, 'g');
+  return (await res.text()).replace(csi, '').replace(other, '').replace(/\r/g, '');
 };
 
 // -- snapshots --------------------------------------------------------------------
