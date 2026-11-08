@@ -6,10 +6,6 @@ import {
   Breadcrumb,
   BreadcrumbItem,
   Content,
-  DescriptionList,
-  DescriptionListDescription,
-  DescriptionListGroup,
-  DescriptionListTerm,
   Flex,
   FlexItem,
   PageSection,
@@ -87,33 +83,41 @@ const VmConsolePage: React.FC = () => {
       empty={false}
     >
       <PageSection hasBodyWrapper={false}>
-        {/* The sign-in details, so nobody goes back to the machine's page for the password. */}
-        <DescriptionList
-          isCompact
-          isHorizontal
-          horizontalTermWidthModifier={{ default: '10ch' }}
+        {/* The sign-in details on one line, so nobody goes back to the machine's
+            page for the password. The line wraps on a narrow window. */}
+        <Flex
+          alignItems={{ default: 'alignItemsCenter' }}
+          gap={{ default: 'gapLg' }}
           className="pf-v6-u-mb-md"
           data-testid="ceamls-console-signin"
         >
-          <DescriptionListGroup>
-            <DescriptionListTerm>User name</DescriptionListTerm>
-            <DescriptionListDescription>
+          <Flex alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapSm' }}>
+            <FlexItem>
+              <Content component="p" className="pf-v6-u-font-weight-bold">
+                User name
+              </Content>
+            </FlexItem>
+            <FlexItem>
               <code>{vmUser(vm)}</code>
-            </DescriptionListDescription>
-          </DescriptionListGroup>
-          <DescriptionListGroup>
-            <DescriptionListTerm>Password</DescriptionListTerm>
-            <DescriptionListDescription>
+            </FlexItem>
+          </Flex>
+          <Flex alignItems={{ default: 'alignItemsCenter' }} gap={{ default: 'gapSm' }}>
+            <FlexItem>
+              <Content component="p" className="pf-v6-u-font-weight-bold">
+                Password
+              </Content>
+            </FlexItem>
+            <FlexItem>
               {password ? (
-                <div style={{ maxWidth: 360 }}>
+                <div style={{ width: 300, maxWidth: '100%' }}>
                   <Password value={password} />
                 </div>
               ) : (
                 'This machine was made without a password. Use SSH.'
               )}
-            </DescriptionListDescription>
-          </DescriptionListGroup>
-        </DescriptionList>
+            </FlexItem>
+          </Flex>
+        </Flex>
         <SerialConsole
           ns={ns}
           name={name}
