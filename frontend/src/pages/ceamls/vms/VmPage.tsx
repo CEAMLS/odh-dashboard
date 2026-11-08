@@ -23,14 +23,11 @@ import {
   FlexItem,
   Grid,
   GridItem,
-  InputGroup,
-  InputGroupItem,
   PageSection,
-  TextInput,
   Timestamp,
   Tooltip,
 } from '@patternfly/react-core';
-import { CopyIcon, EyeIcon, EyeSlashIcon, ExternalLinkAltIcon } from '@patternfly/react-icons';
+import { ExternalLinkAltIcon } from '@patternfly/react-icons';
 import { ApplicationsPage } from '@odh-dashboard/ui-core';
 import { ProjectDetailsContext } from '#~/pages/projects/ProjectDetailsContext';
 import { vmConsoleRoute, vmsRoute } from '#~/pages/ceamls/routes';
@@ -69,42 +66,7 @@ import SerialConsole from './SerialConsole';
 import SnapshotsCard from './SnapshotsCard';
 import UsageCard from './UsageCard';
 import VmStateLabel from './VmState';
-
-const Password: React.FC<{ value: string }> = ({ value }) => {
-  const [shown, setShown] = React.useState(false);
-  const [copied, setCopied] = React.useState(false);
-  const copy = () => {
-    void navigator.clipboard.writeText(value);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-  return (
-    <InputGroup>
-      <InputGroupItem isFill>
-        <TextInput
-          id="ceamls-vm-password"
-          type={shown ? 'text' : 'password'}
-          value={value}
-          readOnlyVariant="default"
-          aria-label="Password"
-        />
-      </InputGroupItem>
-      <InputGroupItem>
-        <Button
-          variant="control"
-          onClick={() => setShown((s) => !s)}
-          aria-label={shown ? 'Hide the password' : 'Show the password'}
-          icon={shown ? <EyeSlashIcon /> : <EyeIcon />}
-        />
-      </InputGroupItem>
-      <InputGroupItem>
-        <Button variant="control" onClick={copy} aria-label="Copy the password" icon={<CopyIcon />}>
-          {copied ? 'Copied' : 'Copy'}
-        </Button>
-      </InputGroupItem>
-    </InputGroup>
-  );
-};
+import Password from './Password';
 
 const VmPage: React.FC = () => {
   const { currentProject } = React.useContext(ProjectDetailsContext);

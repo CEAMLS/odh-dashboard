@@ -6,6 +6,10 @@ import {
   Breadcrumb,
   BreadcrumbItem,
   Content,
+  DescriptionList,
+  DescriptionListDescription,
+  DescriptionListGroup,
+  DescriptionListTerm,
   Flex,
   FlexItem,
   PageSection,
@@ -14,7 +18,8 @@ import { ApplicationsPage } from '@odh-dashboard/ui-core';
 import { ProjectDetailsContext } from '#~/pages/projects/ProjectDetailsContext';
 import { vmRoute, vmsRoute } from '#~/pages/ceamls/routes';
 import { Loading } from '#~/pages/ceamls/buckets/common';
-import { useVm, useVmi, vmState, vmUser } from './api';
+import { useVm, useVmi, vmPassword, vmState, vmUser } from './api';
+import Password from './Password';
 import SerialConsole from './SerialConsole';
 import VmStateLabel from './VmState';
 
@@ -26,6 +31,7 @@ const VmConsolePage: React.FC = () => {
   const [vmi] = useVmi(ns, name);
   const state = vmState(vm, vmi);
   const running = state.tone === 'ok';
+  const password = vm ? vmPassword(vm) : undefined;
 
   React.useEffect(() => {
     const old = document.title;
@@ -81,6 +87,33 @@ const VmConsolePage: React.FC = () => {
       empty={false}
     >
       <PageSection hasBodyWrapper={false}>
+        {/* The sign-in details, so nobody goes back to the machine's page for the password. */}
+        <DescriptionList
+          isCompact
+          isHorizontal
+          horizontalTermWidthModifier={{ default: '10ch' }}
+          className="pf-v6-u-mb-md"
+          data-testid="ceamls-console-signin"
+        >
+          <DescriptionListGroup>
+            <DescriptionListTerm>User name</DescriptionListTerm>
+            <DescriptionListDescription>
+              <code>{vmUser(vm)}</code>
+            </DescriptionListDescription>
+          </DescriptionListGroup>
+          <DescriptionListGroup>
+            <DescriptionListTerm>Password</DescriptionListTerm>
+            <DescriptionListDescription>
+              {password ? (
+                <div style={{ maxWidth: 360 }}>
+                  <Password value={password} />
+                </div>
+              ) : (
+                'This machine was made without a password. Use SSH.'
+              )}
+            </DescriptionListDescription>
+          </DescriptionListGroup>
+        </DescriptionList>
         <SerialConsole
           ns={ns}
           name={name}
