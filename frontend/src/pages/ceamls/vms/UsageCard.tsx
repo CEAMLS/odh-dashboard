@@ -155,6 +155,7 @@ const Tile: React.FC<{
       flexDirection: 'column',
       gap: 6,
       minWidth: 0,
+      height: '100%',
     }}
   >
     <Content component="small" style={{ fontWeight: 600 }}>

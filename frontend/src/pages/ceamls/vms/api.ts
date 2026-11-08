@@ -875,22 +875,19 @@ export const useLauncherPod = (ns: string, name: string, active: boolean): strin
 
 /** The last lines of the machine's serial output, from the launcher pod. */
 export const fetchBootLog = async (ns: string, pod: string, lines = 200): Promise<string> => {
+  // The hub proxy parses an answer as JSON unless the request asks for text
+  // first. The API server wants a JSON type somewhere in the list, so `*/*`
+  // follows at a lower weight.
   const res = await fetch(
     `/api/k8s/api/v1/namespaces/${encodeURIComponent(ns)}/pods/${encodeURIComponent(
       pod,
     )}/log?container=guest-console-log&tailLines=${lines}`,
+    { headers: { Accept: 'text/plain, */*;q=0.5' } },
   );
   if (res.status >= 400) {
     throw new Error(`The boot log could not be read (${res.status})`);
   }
-  // The hub proxy may wrap a text answer in JSON; take either.
-  const text = await res.text();
-  try {
-    const parsed: unknown = JSON.parse(text);
-    return typeof parsed === 'string' ? parsed : text;
-  } catch {
-    return text;
-  }
+  return res.text();
 };
 
 // -- snapshots --------------------------------------------------------------------

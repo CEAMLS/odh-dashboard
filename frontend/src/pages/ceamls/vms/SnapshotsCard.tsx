@@ -316,7 +316,7 @@ const SnapshotsCard: React.FC<Props> = ({ ns, vm, running, onRestoring }) => {
                       {st.detail ? <Content component="small">{st.detail}</Content> : null}
                     </Td>
                     <Td dataLabel="Note">{s.metadata?.annotations?.[SNAPSHOT_NOTE] ?? ''}</Td>
-                    <Td isActionCell>
+                    <Td isActionCell modifier="nowrap">
                       <Button
                         variant="link"
                         isInline
