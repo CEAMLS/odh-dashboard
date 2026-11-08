@@ -14,6 +14,7 @@ import { K8sStatusError, isK8sStatus } from '@odh-dashboard/k8s-core';
 import { groupVersionKind } from '#~/api/k8sUtils';
 import { EventModel, PodModel } from '#~/api/models';
 import useK8sWatchResourceList from '#~/utilities/useK8sWatchResourceList';
+import { useUser } from '#~/redux/selectors';
 import type { CustomWatchK8sResult } from '#~/types';
 import {
   ClusterInstancetypeModel,
@@ -21,6 +22,7 @@ import {
   DataVolumeModel,
   InstancetypeModel,
   ResourceQuotaModel,
+  SecretModel,
   VirtualMachineInstanceModel,
   VirtualMachineModel,
   VirtualMachineRestoreModel,
@@ -67,6 +69,18 @@ export type Image = {
 const UBUNTU_FIRST_BOOT =
   'package_update: true\npackages: [qemu-guest-agent]\nruncmd: [[systemctl, enable, --now, qemu-guest-agent]]\n';
 
+// The guest agent writes the keys of the project's people into the
+// user's authorized_keys while the machine runs (the qemuGuestAgent
+// propagation in newVmObject). SELinux stops that write on Fedora and
+// CentOS until the boolean is on. CentOS Stream 10's policy also lacks
+// three capabilities, so it gets a small module too. Checked live on
+// 2026-11-08 on all four images. The ceamls command (cli/src/cmd/vms.rs)
+// and the console templates (scripts/render_vm_templates.py) in the
+// cluster repo carry the same lines.
+const SELINUX_FIRST_BOOT = 'runcmd:\n  - [setsebool, -P, virt_qemu_ga_manage_ssh, on]\n';
+const SELINUX_FIRST_BOOT_EL10 =
+  'write_files:\n  - path: /etc/selinux/ceamls-qemu-ga.cil\n    content: "(allow virt_qemu_ga_t self (capability (setgid setuid chown fowner dac_override dac_read_search)))\\n"\nruncmd:\n  - [setsebool, -P, virt_qemu_ga_manage_ssh, on]\n  - [semodule, -i, /etc/selinux/ceamls-qemu-ga.cil]\n';
+
 /** The four images the cluster imports. The order is the order on the form. */
 export const IMAGES: Image[] = [
   {
@@ -76,20 +90,75 @@ export const IMAGES: Image[] = [
     note: 'Long-term support. apt.',
     firstBoot: UBUNTU_FIRST_BOOT,
   },
-  { name: 'fedora', title: 'Fedora', user: 'fedora', note: 'The current release. dnf.' },
+  {
+    name: 'fedora',
+    title: 'Fedora',
+    user: 'fedora',
+    note: 'The current release. dnf.',
+    firstBoot: SELINUX_FIRST_BOOT,
+  },
   {
     name: 'centos-stream9',
     title: 'CentOS Stream 9',
     user: 'centos',
     note: 'Close to RHEL 9. dnf.',
+    firstBoot: SELINUX_FIRST_BOOT,
   },
   {
     name: 'centos-stream10',
     title: 'CentOS Stream 10',
     user: 'centos',
     note: 'Close to RHEL 10. dnf.',
+    firstBoot: SELINUX_FIRST_BOOT_EL10,
   },
 ];
+
+/** The Secret data key the controller gives a person (admin_app/objects.py, secret_key_name). */
+const secretKeyName = (email: string): string =>
+  email.toLowerCase().replace(/[^-._a-zA-Z0-9]/g, '_');
+
+type SecretKind = K8sResourceCommon & { data?: Record<string, string> };
+
+/**
+ * Whether the signed-in person's SSH key is in the project's key Secret:
+ * true, false, or undefined while it loads or when the Secret cannot be
+ * read. The Secret is what the machines install, so it is the one truth.
+ */
+export const useMyKeyInProject = (ns: string): boolean | undefined => {
+  const { username } = useUser();
+  const [has, setHas] = React.useState<boolean | undefined>(undefined);
+  React.useEffect(() => {
+    let live = true;
+    setHas(undefined);
+    if (username) {
+      const mine = `${secretKeyName(username)}-`;
+      k8sGetResource<SecretKind>({
+        model: SecretModel,
+        queryOptions: { name: SSH_KEYS_SECRET, ns },
+      })
+        .then((s) => {
+          if (live) {
+            setHas(Object.keys(s.data ?? {}).some((k) => k.startsWith(mine)));
+          }
+        })
+        .catch(() => {
+          if (live) {
+            setHas(undefined);
+          }
+        });
+    }
+    return () => {
+      live = false;
+    };
+  }, [ns, username]);
+  return has;
+};
+
+/** Does the machine take new keys while it runs (made since 2026-11-08)? */
+export const liveKeys = (vm: VirtualMachineKind): boolean =>
+  (vm.spec.template.spec.accessCredentials ?? []).some(
+    (c) => 'qemuGuestAgent' in c.sshPublicKey.propagationMethod,
+  );
 
 export const imageByName = (name: string | undefined): Image | undefined =>
   IMAGES.find((i) => i.name === name);
@@ -589,11 +658,14 @@ export const newVmObject = (ns: string, form: NewVm): VirtualMachineKind => ({
             },
           },
         ],
+        // The guest agent installs the keys and keeps them current while
+        // the machine runs. Not noCloud as well: KubeVirt gives both entries
+        // the same volume name and the launcher pod is refused.
         accessCredentials: [
           {
             sshPublicKey: {
               source: { secret: { secretName: SSH_KEYS_SECRET } },
-              propagationMethod: { noCloud: {} },
+              propagationMethod: { qemuGuestAgent: { users: [form.image.user] } },
             },
           },
         ],
@@ -655,6 +727,8 @@ export const errorMessage = (e: unknown): string => {
 /** The address of the researcher docs. */
 export const VM_TUTORIAL_URL =
   'https://console.apps.ceamls.morgan.edu/docs/tutorials/04-create-a-vm/';
+/** The docs page on the profile and the SSH key. */
+export const PROFILE_DOC_URL = 'https://console.apps.ceamls.morgan.edu/docs/account/your-profile/';
 
 // -- the second version: usage, activity, the guest, snapshots -----------------
 // planning/vm_pages.md section 10 in the cluster repo.

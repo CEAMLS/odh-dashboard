@@ -63,3 +63,10 @@ export const VirtualMachineRestoreModel: K8sModelCommon = {
   kind: 'VirtualMachineRestore',
   plural: 'virtualmachinerestores',
 };
+
+/** The project's SSH key Secret (ceamls-ssh-keys), read to say whether the person's key is in it. */
+export const SecretModel: K8sModelCommon = {
+  apiVersion: 'v1',
+  kind: 'Secret',
+  plural: 'secrets',
+};

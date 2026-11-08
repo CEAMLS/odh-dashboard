@@ -40,8 +40,10 @@ import {
   diskUseLine,
   errorMessage,
   formatMemory,
+  liveKeys,
   memoryBytesOf,
   rootFilesystem,
+  useMyKeyInProject,
   useDataVolume,
   useFilesystems,
   useGuestOsInfo,
@@ -76,6 +78,7 @@ const VmPage: React.FC = () => {
   const [vm, vmLoaded, vmError] = useVm(ns, name);
   const [vmi] = useVmi(ns, name);
   const [sizes] = useSizes(ns);
+  const hasKey = useMyKeyInProject(ns);
   const [error, setError] = React.useState<string | undefined>(undefined);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [acting, setActing] = React.useState(false);
@@ -136,6 +139,7 @@ const VmPage: React.FC = () => {
   const address = running ? vmiAddress(vmi) : undefined;
   const problem = state.tone === 'bad' ? vmProblem(vm) : undefined;
   const sshLine = `ceamls vm ssh ${name} -p ${ns}`;
+  const live = liveKeys(vm);
 
   return (
     <ApplicationsPage
@@ -293,9 +297,27 @@ const VmPage: React.FC = () => {
                           <ClipboardCopy isReadOnly hoverTip="Copy" clickTip="Copied" isCode>
                             {sshLine}
                           </ClipboardCopy>
-                          <Content component="small">
-                            Needs the <code>ceamls</code> command signed in, and your SSH key in
-                            your profile before the machine was made.{' '}
+                          <Content component="small" data-testid="ceamls-ssh-hint">
+                            {hasKey === false ? (
+                              <>
+                                Your profile has no SSH key yet. Run{' '}
+                                <code>ceamls ssh-key setup</code> on your computer.{' '}
+                                {live
+                                  ? 'This machine gets the key within a minute.'
+                                  : 'This machine took keys at its first boot only, so make it again after that.'}
+                              </>
+                            ) : live ? (
+                              <>
+                                Needs the <code>ceamls</code> command signed in, and your SSH key in
+                                your profile (<code>ceamls ssh-key setup</code>).
+                              </>
+                            ) : (
+                              <>
+                                Needs the <code>ceamls</code> command signed in. This machine took
+                                the keys from your profile at its first boot only; a key added since
+                                is not in it.
+                              </>
+                            )}{' '}
                             <a href={VM_TUTORIAL_URL} target="_blank" rel="noopener noreferrer">
                               How to set them up <ExternalLinkAltIcon />
                             </a>

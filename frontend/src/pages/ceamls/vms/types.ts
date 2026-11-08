@@ -36,7 +36,9 @@ export type VirtualMachineKind = K8sResourceCommon & {
         accessCredentials?: {
           sshPublicKey: {
             source: { secret: { secretName: string } };
-            propagationMethod: { noCloud: Record<string, never> };
+            propagationMethod:
+              | { noCloud: Record<string, never> }
+              | { qemuGuestAgent: { users: string[] } };
           };
         }[];
       };

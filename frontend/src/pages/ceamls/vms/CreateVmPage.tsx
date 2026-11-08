@@ -45,6 +45,8 @@ import {
   useImages,
   useSizes,
   useVms,
+  PROFILE_DOC_URL,
+  useMyKeyInProject,
 } from './api';
 import type { ImageState, Size } from './api';
 
@@ -64,6 +66,7 @@ const CreateVmPage: React.FC = () => {
   const [sizes, sizesLoaded] = useSizes(ns);
   const [vms] = useVms(ns);
   const room = useRoom(ns);
+  const hasKey = useMyKeyInProject(ns);
 
   const [name, setName] = React.useState('');
   const [touched, setTouched] = React.useState(false);
@@ -311,9 +314,25 @@ const CreateVmPage: React.FC = () => {
           </FormGroup>
 
           <Content component="p">
-            Your SSH keys from your profile are installed at the first boot. A password for the
-            browser console is made for you and shown on the machine&apos;s page.
+            The SSH keys from your profile go in at the first boot, and a key you add later reaches
+            the machine within a minute. A password for the browser console is made for you and
+            shown on the machine&apos;s page.
           </Content>
+
+          {hasKey === false && (
+            <Alert
+              variant="info"
+              isInline
+              title="Your profile has no SSH key"
+              data-testid="ceamls-no-ssh-key"
+            >
+              Run <code>ceamls ssh-key setup</code> on your computer, or add the key in My Account.
+              The machine gets it within a minute, also after it has started.{' '}
+              <a href={PROFILE_DOC_URL} target="_blank" rel="noopener noreferrer">
+                How to add a key
+              </a>
+            </Alert>
+          )}
 
           {error && (
             <Alert variant="danger" isInline title="The machine was not created">
