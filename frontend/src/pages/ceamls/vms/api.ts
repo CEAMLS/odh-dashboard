@@ -175,7 +175,10 @@ export type Directory = {
 const directoryOf = (secret: SecretKind | undefined): Directory => {
   const people = splitList(secret?.metadata?.annotations?.['ceamls.morgan.edu/people']);
   const admins = splitList(secret?.metadata?.annotations?.['ceamls.morgan.edu/admins']);
-  const keyed = keyedIn(secret);
+  // `keyed` names everyone with a key, administrators too; the data carries
+  // the PI's and the members' keys only. An older controller has no `keyed`.
+  const keyedAnno = secret?.metadata?.annotations?.['ceamls.morgan.edu/keyed'];
+  const keyed = keyedAnno === undefined ? keyedIn(secret) : splitList(keyedAnno).map(secretKeyName);
   return {
     people,
     admins,
@@ -262,7 +265,10 @@ export const useMyKeyInProject = (ns: string): boolean | undefined => {
       })
         .then((s) => {
           if (live) {
-            setHas(Object.keys(s.data ?? {}).some((k) => k.startsWith(mine)));
+            setHas(
+              directoryOf(s).hasKey(username) ||
+                Object.keys(s.data ?? {}).some((k) => k.startsWith(mine)),
+            );
           }
         })
         .catch(() => {
