@@ -101,7 +101,7 @@ const CreateVmPage: React.FC = () => {
   }
   const diskBytes = (disk ?? 0) * 1024 ** 3;
   let diskError: string | undefined;
-  if (disk === undefined) {
+  if (disk === undefined || disk < DISK_MIN || disk > DISK_MAX) {
     diskError = `Between ${DISK_MIN} and ${DISK_MAX} GiB.`;
   } else if (room.diskFree !== undefined && diskBytes > room.diskFree) {
     diskError =
@@ -291,7 +291,9 @@ const CreateVmPage: React.FC = () => {
             <NumberInputWrapper
               id="ceamls-vm-disk"
               value={disk}
-              min={DISK_MIN}
+              // Not DISK_MIN: the input clamps each keystroke, so a typed
+              // "12" became 102. The helper text says the range instead.
+              min={1}
               max={DISK_MAX}
               increment={10}
               unit="GiB"
