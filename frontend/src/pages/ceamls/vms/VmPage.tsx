@@ -399,8 +399,8 @@ const VmPage: React.FC = () => {
                         <DescriptionListDescription data-testid="ceamls-vm-env">
                           {vmLoadsEnv(vm) ? (
                             <>
-                              Loaded at boot into <code>/etc/ceamls/env</code>.{' '}
-                              <Link to={envRoute(ns)}>Secrets and variables</Link>
+                              Mounted at boot under <code>/mnt/ceamls</code>; every shell you open
+                              exports them. <Link to={envRoute(ns)}>Secrets and variables</Link>
                             </>
                           ) : (
                             'Not loaded. A machine made before 2026-11-09, or made without the option.'

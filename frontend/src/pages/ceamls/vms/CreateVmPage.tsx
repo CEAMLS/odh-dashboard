@@ -328,9 +328,9 @@ const CreateVmPage: React.FC = () => {
               label="Load the project environment at boot"
               description={
                 <>
-                  The machine writes the project&apos;s{' '}
-                  <Link to={envRoute(ns)}>secrets and variables</Link> to{' '}
-                  <code>/etc/ceamls/env</code> at every boot, and every login shell reads them.
+                  The machine mounts the project&apos;s{' '}
+                  <Link to={envRoute(ns)}>secrets and variables</Link> at every boot, and every
+                  shell you open exports them.
                   {projectEnv.loaded
                     ? projectEnv.vars.length === 0
                       ? ' The project has none yet; the machine picks them up when you add some and restart it.'

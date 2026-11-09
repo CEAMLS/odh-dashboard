@@ -32,23 +32,28 @@ describe('withEnvCloudInit', () => {
     expect(doc.user).toBe(ubuntu.user);
     expect(doc.password).toBe('pw');
     expect(doc.packages).toEqual(['qemu-guest-agent']);
-    // The image's own runcmd stays first; ours follow.
-    expect(doc.runcmd[0]).toEqual(['systemctl', 'enable', '--now', 'qemu-guest-agent']);
-    expect(doc.runcmd.at(-1)).toEqual(['systemctl', 'enable', '--now', 'ceamls-env.service']);
+    // The image's own runcmd stays as it is.
+    expect(doc.runcmd).toEqual([['systemctl', 'enable', '--now', 'qemu-guest-agent']]);
+    expect(doc.mounts).toEqual([
+      ['LABEL=CEAMLSENV', '/mnt/ceamls/env', 'iso9660', 'ro,nofail', '0', '0'],
+      ['LABEL=CEAMLSSEC', '/mnt/ceamls/secrets', 'iso9660', 'ro,nofail', '0', '0'],
+    ]);
     expect(doc.write_files.map((f: { path: string }) => f.path)).toEqual([
-      '/usr/local/sbin/ceamls-env-load',
-      '/etc/systemd/system/ceamls-env.service',
       '/etc/profile.d/ceamls-env.sh',
     ]);
-    expect(doc.write_files[0].permissions).toBe('0755');
-    expect(doc.write_files[0].content).toContain('for label in CEAMLSENV CEAMLSSEC; do');
+    expect(doc.write_files[0].content).toContain(
+      'for d in /mnt/ceamls/env /mnt/ceamls/secrets; do',
+    );
+    // KubeVirt refuses inline cloud-init over 2048 bytes.
+    expect(out.length).toBeLessThan(2048);
   });
   it('merges with an image that already writes files', () => {
     const el10 = IMAGES.find((i) => i.firstBoot?.includes('write_files'));
     expect(el10).toBeDefined();
     const out = withEnvCloudInit(`#cloud-config\nuser: cloud-user\n${el10?.firstBoot ?? ''}`);
     const doc = YAML.parse(out.replace(/^#cloud-config\n/, ''));
-    expect(doc.write_files.length).toBeGreaterThan(3);
+    expect(doc.write_files.length).toBeGreaterThan(1);
+    expect(out.length).toBeLessThan(2048);
   });
 });
 
@@ -71,7 +76,7 @@ describe('newVmObject with env', () => {
       name: 'ceamls-env-secrets',
       secret: { secretName: 'ceamls-env-secrets', optional: true, volumeLabel: 'CEAMLSSEC' },
     });
-    expect(volumes[1].cloudInitNoCloud?.userData).toContain('ceamls-env.service');
+    expect(volumes[1].cloudInitNoCloud?.userData).toContain('LABEL=CEAMLSENV');
     // No disks list: KubeVirt adds one per volume.
     expect(vm.spec.template.spec.domain?.devices).toEqual({});
     expect(withEnv(plain)).toEqual(vm);

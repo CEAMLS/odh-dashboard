@@ -2,7 +2,7 @@
 // of a project live in two hidden objects: the ConfigMap `ceamls-env` (the
 // variables) and the Secret `ceamls-env-secrets` (the secrets). One variable
 // is one key. A workbench loads both with two envFrom entries; a VM mounts
-// both as disks and a boot service writes /etc/ceamls/env from them. The
+// both as disks and a profile.d file exports them in every shell you open. The
 // ceamls command (cli/src/cmd/env.rs in the cluster repo) uses the same
 // names and the same disk labels. Plan: planning/hub_pages.md section 3.6.
 import type { EnvironmentFromVariable } from '@odh-dashboard/k8s-core';
@@ -14,7 +14,7 @@ export const ENV_OBJECT_NAMES = [ENV_CONFIGMAP, ENV_SECRET];
 export const LABEL = 'ceamls.morgan.edu/';
 /** Who changed each variable and when, as JSON on both objects. */
 export const META_ANNOTATION = `${LABEL}env-meta`;
-/** The disk labels the boot service mounts (the iso9660 volume ids). */
+/** The disk labels the guest mounts (the iso9660 volume ids). */
 export const ENV_DISK_LABEL = 'CEAMLSENV';
 export const SECRET_DISK_LABEL = 'CEAMLSSEC';
 
@@ -155,79 +155,39 @@ export const shellQuote = (value: string): string => `'${value.replace(/'/g, `'\
 export const exportLines = (vars: EnvVar[]): string =>
   vars.map((v) => `export ${v.name}=${shellQuote(v.value)}`).join('\n');
 
-// -- the VM side: a boot service that writes /etc/ceamls/env from two disks --
+// -- the VM side: the two disks mounted at every boot, exported in every shell --
+// Inline cloud-init is capped at 2048 bytes by KubeVirt, so there is no
+// boot service: two fstab entries (cloud-init `mounts`) and one short
+// profile.d file do the work.
 
-/** The guest script. Also in cli/src/cmd/vms.rs (ENV_LOAD_SCRIPT); keep them the same. */
-export const ENV_LOAD_SCRIPT = `#!/bin/sh
-# Writes /etc/ceamls/env from the two disks that carry the project
-# environment: ${ENV_DISK_LABEL} (the variables) and ${SECRET_DISK_LABEL} (the secrets).
-# The cluster builds the disks when the VM starts, so a restart brings
-# new values. Runs from ceamls-env.service at every boot.
-set -u
-out=/etc/ceamls/env
-tmp=$(mktemp)
-chmod 0644 "$tmp"
-echo "# Written by ceamls-env.service at $(date -u +%FT%TZ). Do not edit; change the project environment instead." >"$tmp"
-n=0
-for label in ${ENV_DISK_LABEL} ${SECRET_DISK_LABEL}; do
-  dev=/dev/disk/by-label/$label
-  i=0
-  while [ ! -e "$dev" ] && [ $i -lt 10 ]; do sleep 1; i=$((i + 1)); done
-  [ -e "$dev" ] || continue
-  mnt=$(mktemp -d)
-  if mount -o ro "$dev" "$mnt" 2>/dev/null; then
-    for f in "$mnt"/*; do
-      [ -f "$f" ] || continue
-      name=$(basename "$f")
-      case $name in [A-Za-z_]*) ;; *) continue ;; esac
-      case $name in *[!A-Za-z0-9_]*) continue ;; esac
-      val=$(cat "$f"; printf x); val=\${val%x}
-      printf "%s='%s'\\n" "$name" "$(printf %s "$val" | sed "s/'/'\\\\\\\\''/g")" >>"$tmp"
-      n=$((n + 1))
-    done
-    umount "$mnt"
-  fi
-  rmdir "$mnt"
+/** Where the two disks are mounted in the guest. */
+export const ENV_MOUNT = '/mnt/ceamls/env';
+export const SECRET_MOUNT = '/mnt/ceamls/secrets';
+
+/** The profile.d file. Also in cli/src/cmd/env.rs (PROFILE); keep them the same. */
+export const ENV_PROFILE = `# The project environment (ceamls env): one file per variable on the
+# disks ${ENV_DISK_LABEL} and ${SECRET_DISK_LABEL}, mounted by fstab. Exported in every shell you open.
+for d in ${ENV_MOUNT} ${SECRET_MOUNT}; do
+  for f in "$d"/*; do
+    [ -f "$f" ] || continue
+    n=\${f##*/}
+    case $n in [A-Za-z_]*) ;; *) continue ;; esac
+    case $n in *[!A-Za-z0-9_]*) continue ;; esac
+    export "$n=$(cat "$f")"
+  done
 done
-mkdir -p /etc/ceamls
-mv "$tmp" "$out"
-echo "ceamls-env: wrote $n variables to $out"
-`;
-
-export const ENV_UNIT = `[Unit]
-Description=Write /etc/ceamls/env from the project environment disks
-After=local-fs.target
-Before=multi-user.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/sbin/ceamls-env-load
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-`;
-
-export const ENV_PROFILE = `# The project environment, written at boot by ceamls-env.service.
-if [ -r /etc/ceamls/env ]; then
-  set -a
-  . /etc/ceamls/env
-  set +a
-fi
 `;
 
 export type CloudInitFile = { path: string; permissions: string; content: string };
 
-/** The cloud-init files and commands that install the boot service. */
 export const ENV_CLOUD_INIT_FILES: CloudInitFile[] = [
-  { path: '/usr/local/sbin/ceamls-env-load', permissions: '0755', content: ENV_LOAD_SCRIPT },
-  { path: '/etc/systemd/system/ceamls-env.service', permissions: '0644', content: ENV_UNIT },
   { path: '/etc/profile.d/ceamls-env.sh', permissions: '0644', content: ENV_PROFILE },
 ];
 
-export const ENV_CLOUD_INIT_RUNCMD: string[][] = [
-  ['systemctl', 'daemon-reload'],
-  ['systemctl', 'enable', '--now', 'ceamls-env.service'],
+/** The fstab lines: the disks by label, read-only, and a missing one does not stop the boot. */
+export const ENV_CLOUD_INIT_MOUNTS: string[][] = [
+  [`LABEL=${ENV_DISK_LABEL}`, ENV_MOUNT, 'iso9660', 'ro,nofail', '0', '0'],
+  [`LABEL=${SECRET_DISK_LABEL}`, SECRET_MOUNT, 'iso9660', 'ro,nofail', '0', '0'],
 ];
 
 /** The two volumes a VM carries when it loads the project environment. */
