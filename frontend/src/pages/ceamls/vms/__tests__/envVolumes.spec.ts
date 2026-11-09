@@ -77,8 +77,30 @@ describe('newVmObject with env', () => {
       secret: { secretName: 'ceamls-env-secrets', optional: true, volumeLabel: 'CEAMLSSEC' },
     });
     expect(volumes[1].cloudInitNoCloud?.userData).toContain('LABEL=CEAMLSENV');
-    // No disks list: KubeVirt adds one per volume.
-    expect(vm.spec.template.spec.domain?.devices).toEqual({});
-    expect(withEnv(plain)).toEqual(vm);
+    // No disks list: KubeVirt adds one per volume. The one interface has a
+    // fixed, locally administered MAC, so a restart keeps the address.
+    const devices = vm.spec.template.spec.domain?.devices ?? {};
+    expect(Object.keys(devices)).toEqual(['interfaces']);
+    const iface = asList(devices.interfaces)[0];
+    expect(iface).toMatchObject({ name: 'default', masquerade: {} });
+    expect(String(iface.macAddress)).toMatch(/^02:ce(:[0-9a-f]{2}){4}$/);
+    expect(vm.spec.template.spec.networks).toEqual([{ name: 'default', pod: {} }]);
+    // The same object apart from the random MAC.
+    const sameMac = {
+      ...plain,
+      spec: {
+        ...plain.spec,
+        template: {
+          ...plain.spec.template,
+          spec: { ...plain.spec.template.spec, domain: vm.spec.template.spec.domain },
+        },
+      },
+    };
+    expect(withEnv(sameMac)).toEqual(vm);
   });
 });
+
+const asList = (x: unknown): Record<string, unknown>[] =>
+  Array.isArray(x)
+    ? x.filter((i): i is Record<string, unknown> => typeof i === 'object' && i !== null)
+    : [];

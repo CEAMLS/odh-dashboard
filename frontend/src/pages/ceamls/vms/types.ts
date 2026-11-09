@@ -28,6 +28,7 @@ export type VirtualMachineKind = K8sResourceCommon & {
           cpu?: { cores?: number };
           memory?: { guest?: string };
         };
+        networks?: { name: string; pod?: Record<string, never> }[];
         volumes?: {
           name: string;
           dataVolume?: { name: string };

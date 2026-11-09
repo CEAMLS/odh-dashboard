@@ -796,6 +796,22 @@ export const newVmObject = (ns: string, form: NewVm, owner: string): VirtualMach
   return form.env ? withEnv(vm) : vm;
 };
 
+/**
+ * A locally administered unicast MAC, `02:ce:` and four random bytes.
+ * Without a fixed MAC the machine takes the MAC of its launcher pod, which
+ * changes at every restart, and the guest's netplan (written at the first
+ * boot, matched by MAC) leaves the interface without an address. The MAC
+ * lives only inside the pod, so a clash is not possible.
+ */
+export const fixedMac = (): string => {
+  const b = crypto.getRandomValues(new Uint8Array(4));
+  return `02:ce:${Array.from(b, (x) => x.toString(16).padStart(2, '0')).join(':')}`;
+};
+
+const fixedMacDevices = () => ({
+  interfaces: [{ name: 'default', masquerade: {}, macAddress: fixedMac() }],
+});
+
 const bareVmObject = (ns: string, form: NewVm, owner: string): VirtualMachineKind => ({
   apiVersion: 'kubevirt.io/v1',
   kind: 'VirtualMachine',
@@ -827,8 +843,13 @@ const bareVmObject = (ns: string, form: NewVm, owner: string): VirtualMachineKin
     template: {
       spec: {
         domain: isCustom(form.size)
-          ? { devices: {}, cpu: { cores: form.size.cpu }, memory: { guest: form.size.memory } }
-          : { devices: {} },
+          ? {
+              devices: fixedMacDevices(),
+              cpu: { cores: form.size.cpu },
+              memory: { guest: form.size.memory },
+            }
+          : { devices: fixedMacDevices() },
+        networks: [{ name: 'default', pod: {} }],
         volumes: [
           { name: 'rootdisk', dataVolume: { name: form.name } },
           {
