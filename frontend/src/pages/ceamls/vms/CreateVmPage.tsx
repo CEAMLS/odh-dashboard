@@ -27,6 +27,7 @@ import { ApplicationsPage } from '@odh-dashboard/ui-core';
 import NumberInputWrapper from '@odh-dashboard/ui-core/components/NumberInputWrapper';
 import { getDisplayNameFromK8sResource } from '@odh-dashboard/k8s-core';
 import { ProjectDetailsContext } from '#~/pages/projects/ProjectDetailsContext';
+import { useUser } from '#~/redux/selectors';
 import { vmRoute, vmsRoute } from '#~/pages/ceamls/routes';
 import {
   NAME_RE,
@@ -67,6 +68,7 @@ const CreateVmPage: React.FC = () => {
   const [vms] = useVms(ns);
   const room = useRoom(ns);
   const hasKey = useMyKeyInProject(ns);
+  const { username } = useUser();
 
   const [name, setName] = React.useState('');
   const [touched, setTouched] = React.useState(false);
@@ -149,7 +151,7 @@ const CreateVmPage: React.FC = () => {
     }
     setBusy(true);
     setError(undefined);
-    createVm(ns, { name, ...filled, password: makePassword() })
+    createVm(ns, { name, ...filled, password: makePassword() }, username)
       .then(() => navigate(vmRoute(ns, name)))
       .catch((err: unknown) => {
         setError(errorMessage(err));
@@ -314,9 +316,9 @@ const CreateVmPage: React.FC = () => {
           </FormGroup>
 
           <Content component="p">
-            The SSH keys from your profile go in at the first boot, and a key you add later reaches
-            the machine within a minute. A password for the browser console is made for you and
-            shown on the machine&apos;s page.
+            Only you get SSH access at first, with the keys from your profile; a key you add later
+            reaches the machine within a minute. Add people on the machine&apos;s page. A password
+            for the browser console is made for you and shown there.
           </Content>
 
           {hasKey === false && (

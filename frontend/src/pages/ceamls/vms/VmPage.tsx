@@ -30,6 +30,7 @@ import {
 import { ExternalLinkAltIcon } from '@patternfly/react-icons';
 import { ApplicationsPage } from '@odh-dashboard/ui-core';
 import { ProjectDetailsContext } from '#~/pages/projects/ProjectDetailsContext';
+import { useUser } from '#~/redux/selectors';
 import { vmConsoleRoute, vmsRoute } from '#~/pages/ceamls/routes';
 import { ConfirmDeleteModal, Loading } from '#~/pages/ceamls/buckets/common';
 import {
@@ -43,6 +44,7 @@ import {
   liveKeys,
   memoryBytesOf,
   rootFilesystem,
+  sshPeople,
   useMyKeyInProject,
   useDataVolume,
   useFilesystems,
@@ -66,6 +68,7 @@ import ActivityCard from './ActivityCard';
 import BootLog from './BootLog';
 import SerialConsole from './SerialConsole';
 import SnapshotsCard from './SnapshotsCard';
+import SshAccessCard from './SshAccessCard';
 import UsageCard from './UsageCard';
 import VmStateLabel from './VmState';
 import Password from './Password';
@@ -79,6 +82,8 @@ const VmPage: React.FC = () => {
   const [vmi] = useVmi(ns, name);
   const [sizes] = useSizes(ns);
   const hasKey = useMyKeyInProject(ns);
+  const { username } = useUser();
+  const me = username.toLowerCase();
   const [error, setError] = React.useState<string | undefined>(undefined);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [acting, setActing] = React.useState(false);
@@ -140,6 +145,8 @@ const VmPage: React.FC = () => {
   const problem = state.tone === 'bad' ? vmProblem(vm) : undefined;
   const sshLine = `ceamls vm ssh ${name} -p ${ns}`;
   const live = liveKeys(vm);
+  const people = sshPeople(vm);
+  const onList = people === undefined || people.includes(me);
 
   return (
     <ApplicationsPage
@@ -298,7 +305,13 @@ const VmPage: React.FC = () => {
                             {sshLine}
                           </ClipboardCopy>
                           <Content component="small" data-testid="ceamls-ssh-hint">
-                            {hasKey === false ? (
+                            {!onList ? (
+                              <>
+                                You are not on this machine&apos;s SSH list, so your key is not in
+                                it. Add yourself under SSH access below, or ask the person who made
+                                it.
+                              </>
+                            ) : hasKey === false ? (
                               <>
                                 Your profile has no SSH key yet. Run{' '}
                                 <code>ceamls ssh-key setup</code> on your computer.{' '}
@@ -405,6 +418,9 @@ const VmPage: React.FC = () => {
                     </DescriptionList>
                   </CardBody>
                 </Card>
+              </GridItem>
+              <GridItem span={12}>
+                <SshAccessCard ns={ns} vm={vm} me={me} />
               </GridItem>
               <GridItem span={12}>
                 <UsageCard

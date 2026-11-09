@@ -39,7 +39,7 @@ import VmStateLabel from './VmState';
 
 export const vmsTitle = 'Virtual machines';
 export const vmsDescription =
-  'Linux machines in the project, with the SSH keys from your profile. Open one in the browser console here, or with ceamls vm ssh from your computer.';
+  'Linux machines in the project. Open one in the browser console here, or with ceamls vm ssh from your computer, with the SSH keys from your profile. Each machine has its own list of who may SSH in.';
 
 /** The size column: the name, or the numbers of a custom size. */
 const sizeText = (vm: VirtualMachineKind, sizes: Size[]): string => {
@@ -159,8 +159,8 @@ const VmsPage: React.FC = () => {
         data-testid="ceamls-vms-empty"
       >
         <EmptyStateBody>
-          Make one from an image, with a size and a disk. It runs in the project, and the SSH keys
-          from your profile are installed in it, also when you add one later.
+          Make one from an image, with a size and a disk. It runs in the project, with the SSH keys
+          from your profile installed, also when you add one later. You decide who else may SSH in.
         </EmptyStateBody>
         <EmptyStateFooter>
           <EmptyStateActions>

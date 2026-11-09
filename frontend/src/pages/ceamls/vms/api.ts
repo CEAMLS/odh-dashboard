@@ -7,6 +7,8 @@ import {
   k8sCreateResource,
   k8sDeleteResource,
   k8sGetResource,
+  k8sPatchResource,
+  k8sUpdateResource,
   useK8sWatchResource,
 } from '@openshift/dynamic-plugin-sdk-utils';
 import type { K8sResourceCommon, WatchK8sResult } from '@openshift/dynamic-plugin-sdk-utils';
@@ -49,7 +51,20 @@ export const IMAGES_NS = 'kubevirt-os-images';
 /** The storage class a machine's disk lands on; the quota key starts with it. */
 export const DISK_CLASS = 'ceph-safe';
 
+/**
+ * The project's keys Secret: the directory. Who may have SSH access in the
+ * project (annotations people, admins) and every key. A machine made
+ * before 2026-11-08 installs every key in it.
+ */
 export const SSH_KEYS_SECRET = 'ceamls-ssh-keys';
+/** A machine's SSH list: the emails of the people whose profile keys it installs. */
+export const SSH_PEOPLE_ANNO = 'ceamls.morgan.edu/ssh-people';
+/** On a machine's keys Secret: which machine it belongs to. */
+export const VM_LABEL = 'ceamls.morgan.edu/vm';
+/** The Secret of one machine's SSH keys: the keys of the people on its list. */
+export const vmSecretName = (vm: string): string => `${SSH_KEYS_SECRET}-${vm}`;
+/** The hub gateway routes this to the admin app (gitops/aiplatform/70-storage-api-route.yaml). */
+const KEY_SYNC_URL = '/ceamls/api/ssh-keys/sync';
 
 export const IMAGE_LABEL = 'ceamls.morgan.edu/image';
 
@@ -114,10 +129,119 @@ export const IMAGES: Image[] = [
 ];
 
 /** The Secret data key the controller gives a person (admin_app/objects.py, secret_key_name). */
-const secretKeyName = (email: string): string =>
+export const secretKeyName = (email: string): string =>
   email.toLowerCase().replace(/[^-._a-zA-Z0-9]/g, '_');
 
-type SecretKind = K8sResourceCommon & { data?: Record<string, string> };
+export type SecretKind = K8sResourceCommon & { data?: Record<string, string> };
+
+const splitList = (raw: string | undefined): string[] =>
+  (raw ?? '')
+    .split(',')
+    .map((p) => p.trim().toLowerCase())
+    .filter(Boolean);
+
+/** The people on a machine's SSH list; undefined for a machine without one (made before 2026-11-08). */
+export const sshPeople = (vm: VirtualMachineKind): string[] | undefined => {
+  const raw = vm.metadata?.annotations?.[SSH_PEOPLE_ANNO];
+  if (raw === undefined) {
+    return undefined;
+  }
+  const out: string[] = [];
+  splitList(raw).forEach((p) => {
+    if (!out.includes(p)) {
+      out.push(p);
+    }
+  });
+  return out;
+};
+
+/** Who has a key in a keys Secret: the people whose data entries are there. */
+const keyedIn = (secret: SecretKind | undefined): string[] =>
+  Array.from(
+    new Set(
+      Object.keys(secret?.data ?? {}).map((k) => k.slice(0, Math.max(0, k.lastIndexOf('-')))),
+    ),
+  );
+
+/** Who may have SSH access in the project, and who of them has a key. */
+export type Directory = {
+  people: string[];
+  admins: string[];
+  keyed: string[];
+  mayAccess: (email: string) => boolean;
+  hasKey: (email: string) => boolean;
+};
+
+const directoryOf = (secret: SecretKind | undefined): Directory => {
+  const people = splitList(secret?.metadata?.annotations?.['ceamls.morgan.edu/people']);
+  const admins = splitList(secret?.metadata?.annotations?.['ceamls.morgan.edu/admins']);
+  const keyed = keyedIn(secret);
+  return {
+    people,
+    admins,
+    keyed,
+    mayAccess: (email) =>
+      people.includes(email.toLowerCase()) || admins.includes(email.toLowerCase()),
+    hasKey: (email) => keyed.includes(secretKeyName(email)),
+  };
+};
+
+/**
+ * Ask the cluster to copy the keys now (POST /api/ssh-keys/sync in the
+ * admin app), instead of at its next minute. Quiet when it fails: the
+ * minute still comes.
+ */
+export const kickKeySync = async (ns: string): Promise<void> => {
+  try {
+    await fetch(KEY_SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+      body: JSON.stringify({ project: ns }),
+    });
+  } catch {
+    // The controller copies the keys within a minute anyway.
+  }
+};
+
+const setSshPeople = (ns: string, name: string, people: string[]): Promise<VirtualMachineKind> =>
+  k8sPatchResource<VirtualMachineKind>({
+    model: VirtualMachineModel,
+    queryOptions: { name, ns },
+    patches: [
+      {
+        op: 'add',
+        path: `/metadata/annotations/${SSH_PEOPLE_ANNO.replace(/\//g, '~1')}`,
+        value: people.join(','),
+      },
+    ],
+  });
+
+/** Put a person on the machine's SSH list, and have the keys copied now. */
+export const shareVm = async (ns: string, vm: VirtualMachineKind, email: string): Promise<void> => {
+  const name = vm.metadata?.name ?? '';
+  const people = sshPeople(vm) ?? [];
+  const who = email.trim().toLowerCase();
+  if (!people.includes(who)) {
+    await setSshPeople(ns, name, [...people, who]);
+  }
+  await kickKeySync(ns);
+};
+
+/** Take a person off the machine's SSH list. */
+export const unshareVm = async (
+  ns: string,
+  vm: VirtualMachineKind,
+  email: string,
+): Promise<void> => {
+  const name = vm.metadata?.name ?? '';
+  const who = email.trim().toLowerCase();
+  await setSshPeople(
+    ns,
+    name,
+    (sshPeople(vm) ?? []).filter((p) => p !== who),
+  );
+  await kickKeySync(ns);
+};
 
 /**
  * Whether the signed-in person's SSH key is in the project's key Secret:
@@ -405,6 +529,47 @@ const present = <T extends K8sResourceCommon>(
   return [named(data) ? data : undefined, loaded, error];
 };
 
+/** The project's directory, watched: undefined while it loads or when it cannot be read. */
+export const useDirectory = (ns: string): Directory | undefined => {
+  const [secret, loaded] = present(
+    useK8sWatchResource<SecretKind>(
+      React.useMemo(
+        () => ({
+          isList: false,
+          groupVersionKind: groupVersionKind(SecretModel),
+          namespace: ns,
+          name: SSH_KEYS_SECRET,
+        }),
+        [ns],
+      ),
+      SecretModel,
+    ),
+  );
+  return React.useMemo(
+    () => (loaded && secret ? directoryOf(secret) : undefined),
+    [secret, loaded],
+  );
+};
+
+/** A machine's keys Secret, watched: who has a key in place. undefined while it loads or when absent. */
+export const useVmKeys = (ns: string, vm: string): string[] | undefined => {
+  const [secret, loaded] = present(
+    useK8sWatchResource<SecretKind>(
+      React.useMemo(
+        () => ({
+          isList: false,
+          groupVersionKind: groupVersionKind(SecretModel),
+          namespace: ns,
+          name: vmSecretName(vm),
+        }),
+        [ns, vm],
+      ),
+      SecretModel,
+    ),
+  );
+  return React.useMemo(() => (loaded && secret ? keyedIn(secret) : undefined), [secret, loaded]);
+};
+
 export const useVm = (
   ns: string,
   name: string,
@@ -615,8 +780,8 @@ export type NewVm = {
   password: string;
 };
 
-/** The object the form writes (planning/vm_pages.md section 6). */
-export const newVmObject = (ns: string, form: NewVm): VirtualMachineKind => ({
+/** The object the form writes (planning/vm_pages.md section 6). `owner` starts the SSH list. */
+export const newVmObject = (ns: string, form: NewVm, owner: string): VirtualMachineKind => ({
   apiVersion: 'kubevirt.io/v1',
   kind: 'VirtualMachine',
   metadata: {
@@ -626,6 +791,8 @@ export const newVmObject = (ns: string, form: NewVm): VirtualMachineKind => ({
       'app.kubernetes.io/managed-by': 'ceamls-hub',
       [IMAGE_LABEL]: form.image.name,
     },
+    // The SSH list: the maker only. The machine's page adds people.
+    annotations: { [SSH_PEOPLE_ANNO]: owner.toLowerCase() },
   },
   spec: {
     runStrategy: 'Always',
@@ -658,13 +825,14 @@ export const newVmObject = (ns: string, form: NewVm): VirtualMachineKind => ({
             },
           },
         ],
-        // The guest agent installs the keys and keeps them current while
-        // the machine runs. Not noCloud as well: KubeVirt gives both entries
-        // the same volume name and the launcher pod is refused.
+        // The guest agent installs the keys of the machine's own Secret and
+        // keeps them current while the machine runs. Not noCloud as well:
+        // KubeVirt gives both entries the same volume name and the launcher
+        // pod is refused.
         accessCredentials: [
           {
             sshPublicKey: {
-              source: { secret: { secretName: SSH_KEYS_SECRET } },
+              source: { secret: { secretName: vmSecretName(form.name) } },
               propagationMethod: { qemuGuestAgent: { users: [form.image.user] } },
             },
           },
@@ -674,11 +842,68 @@ export const newVmObject = (ns: string, form: NewVm): VirtualMachineKind => ({
   },
 });
 
-export const createVm = (ns: string, form: NewVm): Promise<VirtualMachineKind> =>
-  k8sCreateResource<VirtualMachineKind>({
-    model: VirtualMachineModel,
-    resource: newVmObject(ns, form),
-  });
+/**
+ * The machine's keys Secret with the maker's keys from the project's
+ * directory, so the machine starts with them (a machine whose Secret is
+ * missing does not start). The controller takes it over within seconds.
+ */
+const writeVmSecret = async (ns: string, name: string, owner: string): Promise<void> => {
+  const directory = await k8sGetResource<SecretKind>({
+    model: SecretModel,
+    queryOptions: { name: SSH_KEYS_SECRET, ns },
+  }).catch(() => undefined);
+  const prefix = `${secretKeyName(owner)}-`;
+  const data = Object.fromEntries(
+    Object.entries(directory?.data ?? {}).filter(([k]) => k.startsWith(prefix)),
+  );
+  const secret: SecretKind = {
+    apiVersion: 'v1',
+    kind: 'Secret',
+    metadata: {
+      name: vmSecretName(name),
+      namespace: ns,
+      labels: { 'ceamls.morgan.edu/project': ns, [VM_LABEL]: name },
+      annotations: {
+        'ceamls.morgan.edu/people': owner.toLowerCase(),
+        'ceamls.morgan.edu/purpose': `SSH public keys of the people with SSH access to the machine ${name}. Made by the AI Hub; CEAMLS Cluster Admin keeps it current.`,
+      },
+    },
+    data,
+  };
+  const existing = await k8sGetResource<SecretKind>({
+    model: SecretModel,
+    queryOptions: { name: vmSecretName(name), ns },
+  }).catch(() => undefined);
+  if (existing) {
+    await k8sUpdateResource<SecretKind>({ model: SecretModel, resource: secret });
+  } else {
+    await k8sCreateResource<SecretKind>({ model: SecretModel, resource: secret });
+  }
+};
+
+export const createVm = async (
+  ns: string,
+  form: NewVm,
+  owner: string,
+): Promise<VirtualMachineKind> => {
+  await writeVmSecret(ns, form.name, owner);
+  try {
+    const made = await k8sCreateResource<VirtualMachineKind>({
+      model: VirtualMachineModel,
+      resource: newVmObject(ns, form, owner),
+    });
+    // The controller fills the machine's Secret now (an administrator's
+    // keys are not in the project's directory) and takes it over.
+    await kickKeySync(ns);
+    return made;
+  } catch (e) {
+    await k8sDeleteResource({
+      model: SecretModel,
+      queryOptions: { name: vmSecretName(form.name), ns },
+    }).catch(() => undefined);
+    throw e;
+  }
+};
 
 export const deleteVm = (ns: string, name: string): Promise<unknown> =>
   k8sDeleteResource({ model: VirtualMachineModel, queryOptions: { name, ns } });
