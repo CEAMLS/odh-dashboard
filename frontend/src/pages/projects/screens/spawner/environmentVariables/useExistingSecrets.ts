@@ -31,7 +31,10 @@ export const fetchExistingSecrets = async (
       (secret) =>
         (secret.type ?? 'Opaque') === 'Opaque' &&
         !isDashboardSecret(secret) &&
-        !isConnection(secret),
+        !isConnection(secret) &&
+        // CEAMLS: the cluster's own Secrets (the project environment, the
+        // SSH keys) have their own pages.
+        !secret.metadata.name.startsWith('ceamls-'),
     )
     .map((secret) => ({
       name: secret.metadata.name,

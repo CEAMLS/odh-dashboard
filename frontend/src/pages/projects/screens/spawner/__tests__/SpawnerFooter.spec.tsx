@@ -101,6 +101,7 @@ describe('EmptyProjects', () => {
         envVariables={mockEnvVariables}
         connections={[mockConnection({})]}
         existingSecretsData={{ secrets: [], loaded: true, canList: true }}
+        projectEnv={false}
       />,
     );
     expect(result.getByTestId('submit-button')).toBeEnabled();
@@ -141,6 +142,7 @@ describe('EmptyProjects', () => {
         envVariables={mockEnvVariables}
         connections={[mockConnection({})]}
         existingSecretsData={{ secrets: [], loaded: true, canList: true }}
+        projectEnv={false}
       />,
     );
 
@@ -159,6 +161,7 @@ describe('EmptyProjects', () => {
         envVariables={mockEnvVariables}
         connections={[mockConnection({})]}
         existingSecretsData={{ secrets: [], loaded: true, canList: true }}
+        projectEnv={false}
         featureStoresLoading
       />,
     );

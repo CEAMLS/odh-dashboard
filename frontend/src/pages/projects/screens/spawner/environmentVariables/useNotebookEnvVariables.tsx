@@ -13,6 +13,7 @@ import {
   SecretCategory,
 } from '#~/pages/projects/types';
 import { isConnection } from '#~/concepts/connectionTypes/utils';
+import { isProjectEnvRef } from '#~/pages/ceamls/projectEnv/envUtils';
 import { getDeletedConfigMapOrSecretVariables, isSecretKind } from './utils';
 
 /**
@@ -70,7 +71,10 @@ export const parseSecretKeyRefEntries = (notebook: NotebookKind): ExistingSecret
 };
 
 export const fetchNotebookEnvVariables = (notebook: NotebookKind): Promise<EnvVariable[]> => {
-  const envFromList = notebook.spec.template.spec.containers[0].envFrom || [];
+  // CEAMLS: the project environment's two objects are not form entries.
+  const envFromList = (notebook.spec.template.spec.containers[0].envFrom || []).filter(
+    (envFrom) => !isProjectEnvRef(envFrom),
+  );
   return Promise.all(
     envFromList
       .map((envFrom) => {

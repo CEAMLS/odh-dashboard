@@ -31,6 +31,7 @@ import {
   getWorkbenchKueueTrackingProperties,
   WorkbenchTrackingEvent,
 } from '#~/concepts/kueue/workbenchTracking';
+import { withProjectEnv } from '#~/pages/ceamls/projectEnv/envUtils';
 import { UseExistingSecretsResult } from './environmentVariables/useExistingSecrets';
 import {
   createConfigMapsAndSecretsForNotebook,
@@ -55,6 +56,8 @@ type SpawnerFooterProps = {
   /** Present when editing; prefer this over looking up the notebook from context. */
   existingNotebook?: NotebookKind;
   existingSecretsData: UseExistingSecretsResult;
+  /** CEAMLS: load the project environment (the two envFrom entries). */
+  projectEnv: boolean;
 };
 
 const SpawnerFooter: React.FC<SpawnerFooterProps> = ({
@@ -68,6 +71,7 @@ const SpawnerFooter: React.FC<SpawnerFooterProps> = ({
   featureStoresLoading = false,
   existingNotebook,
   existingSecretsData,
+  projectEnv,
 }) => {
   const [error, setError] = React.useState<K8sStatusError>();
   const {
@@ -269,7 +273,7 @@ const SpawnerFooter: React.FC<SpawnerFooterProps> = ({
       ...startNotebookData,
       volumes,
       volumeMounts,
-      envFrom,
+      envFrom: withProjectEnv(envFrom, projectEnv),
       secretKeyRefEnvVars,
       connections,
       feastData,
@@ -317,7 +321,7 @@ const SpawnerFooter: React.FC<SpawnerFooterProps> = ({
       ...startNotebookData,
       volumes,
       volumeMounts,
-      envFrom: [...envFrom],
+      envFrom: withProjectEnv(envFrom, projectEnv),
       secretKeyRefEnvVars: getSecretKeyRefEnvVars(envVariables),
       connections,
       feastData,

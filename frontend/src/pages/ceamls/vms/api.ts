@@ -31,6 +31,7 @@ import {
   VirtualMachineRestoreModel,
   VirtualMachineSnapshotModel,
 } from './models';
+import { withEnv } from './envVolumes';
 import type {
   DataSourceKind,
   DataVolumeKind,
@@ -785,10 +786,17 @@ export type NewVm = {
   /** GiB. */
   disk: number;
   password: string;
+  /** Load the project environment at boot (envVolumes.ts). */
+  env?: boolean;
 };
 
 /** The object the form writes (planning/vm_pages.md section 6). `owner` starts the SSH list. */
-export const newVmObject = (ns: string, form: NewVm, owner: string): VirtualMachineKind => ({
+export const newVmObject = (ns: string, form: NewVm, owner: string): VirtualMachineKind => {
+  const vm = bareVmObject(ns, form, owner);
+  return form.env ? withEnv(vm) : vm;
+};
+
+const bareVmObject = (ns: string, form: NewVm, owner: string): VirtualMachineKind => ({
   apiVersion: 'kubevirt.io/v1',
   kind: 'VirtualMachine',
   metadata: {

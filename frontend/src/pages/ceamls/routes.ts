@@ -33,3 +33,9 @@ export const vmRoute = (namespace: string, name: string): string =>
 /** The machine's console alone, for a new tab. */
 export const vmConsoleRoute = (namespace: string, name: string): string =>
   `${vmRoute(namespace, name)}/console`;
+
+// Secrets and variables: the project environment (planning/hub_pages.md section 3.6).
+export const envRootPath = '/env';
+
+export const envRoute = (namespace?: string): string =>
+  !namespace ? envRootPath : `${envRootPath}/${namespace}`;

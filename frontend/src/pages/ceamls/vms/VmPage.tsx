@@ -31,8 +31,9 @@ import { ExternalLinkAltIcon } from '@patternfly/react-icons';
 import { ApplicationsPage } from '@odh-dashboard/ui-core';
 import { ProjectDetailsContext } from '#~/pages/projects/ProjectDetailsContext';
 import { useUser } from '#~/redux/selectors';
-import { vmConsoleRoute, vmsRoute } from '#~/pages/ceamls/routes';
+import { envRoute, vmConsoleRoute, vmsRoute } from '#~/pages/ceamls/routes';
 import { ConfirmDeleteModal, Loading } from '#~/pages/ceamls/buckets/common';
+import { vmLoadsEnv } from './envVolumes';
 import {
   VM_TUTORIAL_URL,
   agentUp,
@@ -391,6 +392,19 @@ const VmPage: React.FC = () => {
                             const diskSize = vmDisk(vm) ? formatMemory(vmDisk(vm)) : '—';
                             return running ? `${diskSize}, use not known yet` : diskSize;
                           })()}
+                        </DescriptionListDescription>
+                      </DescriptionListGroup>
+                      <DescriptionListGroup>
+                        <DescriptionListTerm>Project environment</DescriptionListTerm>
+                        <DescriptionListDescription data-testid="ceamls-vm-env">
+                          {vmLoadsEnv(vm) ? (
+                            <>
+                              Loaded at boot into <code>/etc/ceamls/env</code>.{' '}
+                              <Link to={envRoute(ns)}>Secrets and variables</Link>
+                            </>
+                          ) : (
+                            'Not loaded. A machine made before 2026-11-09, or made without the option.'
+                          )}
                         </DescriptionListDescription>
                       </DescriptionListGroup>
                       <DescriptionListGroup>

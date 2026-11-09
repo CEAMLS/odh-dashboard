@@ -32,6 +32,9 @@ export type VirtualMachineKind = K8sResourceCommon & {
           name: string;
           dataVolume?: { name: string };
           cloudInitNoCloud?: { userData?: string };
+          /** The project environment, as disks (envVolumes.ts). */
+          configMap?: { name: string; optional?: boolean; volumeLabel?: string };
+          secret?: { secretName: string; optional?: boolean; volumeLabel?: string };
         }[];
         accessCredentials?: {
           sshPublicKey: {

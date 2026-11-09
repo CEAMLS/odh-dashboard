@@ -28,12 +28,15 @@ export type EnvironmentVariable = EitherNotBoth<
 export type SecretRef = {
   secretRef: {
     name: string;
+    /** CEAMLS: the project environment objects may be absent. */
+    optional?: boolean;
   };
 };
 
 export type ConfigMapRef = {
   configMapRef: {
     name: string;
+    optional?: boolean;
   };
 };
 

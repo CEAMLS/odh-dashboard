@@ -8,6 +8,7 @@ import {
   Breadcrumb,
   BreadcrumbItem,
   Button,
+  Checkbox,
   Content,
   Form,
   FormGroup,
@@ -28,7 +29,8 @@ import NumberInputWrapper from '@odh-dashboard/ui-core/components/NumberInputWra
 import { getDisplayNameFromK8sResource } from '@odh-dashboard/k8s-core';
 import { ProjectDetailsContext } from '#~/pages/projects/ProjectDetailsContext';
 import { useUser } from '#~/redux/selectors';
-import { vmRoute, vmsRoute } from '#~/pages/ceamls/routes';
+import { envRoute, vmRoute, vmsRoute } from '#~/pages/ceamls/routes';
+import { useProjectEnv } from '#~/pages/ceamls/projectEnv/api';
 import {
   NAME_RE,
   createVm,
@@ -77,6 +79,8 @@ const CreateVmPage: React.FC = () => {
   const [customCpu, setCustomCpu] = React.useState<number | undefined>(2);
   const [customMemory, setCustomMemory] = React.useState<number | undefined>(8);
   const [disk, setDisk] = React.useState<number | undefined>(DISK_DEFAULT);
+  const [env, setEnv] = React.useState(true);
+  const projectEnv = useProjectEnv(ns);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | undefined>(undefined);
 
@@ -151,7 +155,7 @@ const CreateVmPage: React.FC = () => {
     }
     setBusy(true);
     setError(undefined);
-    createVm(ns, { name, ...filled, password: makePassword() }, username)
+    createVm(ns, { name, ...filled, password: makePassword(), env }, username)
       .then(() => navigate(vmRoute(ns, name)))
       .catch((err: unknown) => {
         setError(errorMessage(err));
@@ -315,6 +319,28 @@ const CreateVmPage: React.FC = () => {
                 </HelperTextItem>
               </HelperText>
             </FormHelperText>
+          </FormGroup>
+
+          <FormGroup label="Project environment" fieldId="ceamls-vm-env">
+            <Checkbox
+              id="ceamls-vm-env"
+              data-testid="ceamls-vm-env"
+              label="Load the project environment at boot"
+              description={
+                <>
+                  The machine writes the project&apos;s{' '}
+                  <Link to={envRoute(ns)}>secrets and variables</Link> to{' '}
+                  <code>/etc/ceamls/env</code> at every boot, and every login shell reads them.
+                  {projectEnv.loaded
+                    ? projectEnv.vars.length === 0
+                      ? ' The project has none yet; the machine picks them up when you add some and restart it.'
+                      : ` The project has ${projectEnv.vars.length} now.`
+                    : ''}
+                </>
+              }
+              isChecked={env}
+              onChange={(_e, checked) => setEnv(checked)}
+            />
           </FormGroup>
 
           <Content component="p">

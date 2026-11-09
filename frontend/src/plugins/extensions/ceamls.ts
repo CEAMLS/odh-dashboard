@@ -7,7 +7,8 @@ import { SupportedArea } from '@odh-dashboard/plugin-core/areas';
 // (Projects, which is also the landing page; there is no Home entry).
 // Top-level order, by group, on 3.6:
 //   1 Projects, 2 Workbenches, 2_x Virtual machines, 3 AI hub, 5 Develop & train,
-//   6 Observe & monitor, 6_x Storage (Volumes, Buckets), 7_x CEAMLS Chat (no Learning resources),
+//   6 Observe & monitor, 6_x Storage (Volumes, Buckets), 6_y Secrets and variables,
+//   7_x CEAMLS Chat (no Learning resources),
 //   8 Applications, 8 Settings
 // CEAMLS Chat is an outside address: NavItemHref renders it as a link that
 // opens a new tab. Plan: planning/hub_pages.md in the cluster repo.
@@ -82,6 +83,20 @@ const extensions: (NavExtension | RouteExtension)[] = [
   },
   {
     type: 'app.navigation/href',
+    flags: {
+      required: [SupportedArea.DS_PROJECTS_VIEW],
+    },
+    properties: {
+      id: 'ceamls-env',
+      title: 'Secrets and variables',
+      href: '/env',
+      path: '/env/*',
+      group: '6_y_env',
+      iconRef: () => import('#~/images/icons/EnvNavIcon'),
+    },
+  },
+  {
+    type: 'app.navigation/href',
     properties: {
       id: 'ceamls-chat',
       title: 'CEAMLS Chat',
@@ -128,6 +143,16 @@ const extensions: (NavExtension | RouteExtension)[] = [
     properties: {
       path: '/storage/buckets/*',
       component: () => import('#~/pages/ceamls/buckets/GlobalBucketsRoutes'),
+    },
+  },
+  {
+    type: 'app.route',
+    flags: {
+      required: [SupportedArea.DS_PROJECTS_VIEW],
+    },
+    properties: {
+      path: '/env/*',
+      component: () => import('#~/pages/ceamls/projectEnv/GlobalEnvRoutes'),
     },
   },
   {

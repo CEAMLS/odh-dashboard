@@ -6,6 +6,7 @@ import {
   Breadcrumb,
   BreadcrumbItem,
   Button,
+  Checkbox,
   Content,
   Flex,
   FlexItem,
@@ -32,6 +33,9 @@ import ExtendedButton from '#~/components/ExtendedButton';
 import GenericSidebar from '#~/components/GenericSidebar';
 import { ProjectDetailsContext } from '#~/pages/projects/ProjectDetailsContext';
 import { WorkbenchPathsContext } from '#~/pages/ceamls/WorkbenchPathsContext';
+import { envRoute } from '#~/pages/ceamls/routes';
+import { hasProjectEnv } from '#~/pages/ceamls/projectEnv/envUtils';
+import { useProjectEnv } from '#~/pages/ceamls/projectEnv/api';
 import { NotebookKind } from '#~/k8sTypes';
 import useNotebookImageData from '#~/pages/projects/screens/detail/notebooks/useNotebookImageData';
 import NotebookRestartAlert from '#~/pages/projects/components/NotebookRestartAlert';
@@ -215,6 +219,15 @@ const SpawnerPage: React.FC<SpawnerPageProps> = ({ existingNotebook }) => {
 
   const existingSecretsData = useExistingSecrets(currentProject.metadata.name);
 
+  // CEAMLS: the project environment (Secrets and variables). On for a new
+  // workbench; for an existing one, whatever it has.
+  const [projectEnv, setProjectEnv] = React.useState<boolean>(
+    existingNotebook
+      ? hasProjectEnv(existingNotebook.spec.template.spec.containers[0]?.envFrom)
+      : true,
+  );
+  const projectEnvState = useProjectEnv(currentProject.metadata.name);
+
   const notebooksUsingPVCsWithSizeChanges = React.useMemo(() => {
     const attachedPVCs = storageData.filter((storage) => storage.existingPvc !== undefined);
 
@@ -388,6 +401,26 @@ const SpawnerPage: React.FC<SpawnerPageProps> = ({ existingNotebook }) => {
                   deletedSecrets={deletedSecrets}
                 />
               )}
+              <Checkbox
+                id="ceamls-project-env"
+                data-testid="ceamls-project-env"
+                label="Use the project environment"
+                description={
+                  <>
+                    The workbench gets every variable and secret of the project from{' '}
+                    <Link to={envRoute(currentProject.metadata.name)}>Secrets and variables</Link>
+                    {projectEnvState.loaded
+                      ? projectEnvState.vars.length === 0
+                        ? '. The project has none yet; add some there and the workbench gets them at its next restart.'
+                        : ` (${projectEnvState.vars.length} now). A new or changed value arrives at the next restart.`
+                      : '.'}{' '}
+                    Values typed below are only for this workbench.
+                  </>
+                }
+                isChecked={projectEnv}
+                onChange={(_e, checked) => setProjectEnv(checked)}
+                className="pf-v6-u-mb-md"
+              />
               <EnvironmentVariables
                 envVariables={envVariables}
                 setEnvVariables={setEnvVariables}
@@ -516,6 +549,7 @@ const SpawnerPage: React.FC<SpawnerPageProps> = ({ existingNotebook }) => {
                   featureStoresLoading={featureStoresLoading}
                   existingNotebook={existingNotebook}
                   existingSecretsData={existingSecretsData}
+                  projectEnv={projectEnv}
                 />
               )}
             </CanEnableElyraPipelinesCheck>

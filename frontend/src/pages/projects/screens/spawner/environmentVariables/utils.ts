@@ -1,5 +1,6 @@
 import { ConfigMapKind, NotebookKind } from '#~/k8sTypes';
 import { EnvVariable } from '#~/pages/projects/types';
+import { isProjectEnvRef } from '#~/pages/ceamls/projectEnv/envUtils';
 // eslint-disable-next-line @odh-dashboard/no-restricted-imports -- re-exporting from k8s-core for backward compatibility
 export { isSecretKind } from '@odh-dashboard/k8s-core';
 
@@ -31,21 +32,25 @@ export const getDeletedConfigMapOrSecretVariables = (
   const deletedConfigMaps: string[] = [];
   const deletedSecrets: string[] = [];
 
-  (notebook?.spec.template.spec.containers[0].envFrom || []).forEach((env) => {
-    if (
-      env.configMapRef &&
-      !existingEnvVariables.has(env.configMapRef.name) &&
-      !excludedResources.includes(env.configMapRef.name)
-    ) {
-      deletedConfigMaps.push(env.configMapRef.name);
-    }
-    if (
-      env.secretRef &&
-      !existingEnvVariables.has(env.secretRef.name) &&
-      !excludedResources.includes(env.secretRef.name)
-    ) {
-      deletedSecrets.push(env.secretRef.name);
-    }
-  });
+  // CEAMLS: the project environment is not a form entry; the "Use the
+  // project environment" box owns its two envFrom entries.
+  (notebook?.spec.template.spec.containers[0].envFrom || [])
+    .filter((env) => !isProjectEnvRef(env))
+    .forEach((env) => {
+      if (
+        env.configMapRef &&
+        !existingEnvVariables.has(env.configMapRef.name) &&
+        !excludedResources.includes(env.configMapRef.name)
+      ) {
+        deletedConfigMaps.push(env.configMapRef.name);
+      }
+      if (
+        env.secretRef &&
+        !existingEnvVariables.has(env.secretRef.name) &&
+        !excludedResources.includes(env.secretRef.name)
+      ) {
+        deletedSecrets.push(env.secretRef.name);
+      }
+    });
   return { deletedSecrets, deletedConfigMaps };
 };
