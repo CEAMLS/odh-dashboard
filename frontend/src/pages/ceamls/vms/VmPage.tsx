@@ -467,8 +467,8 @@ const VmPage: React.FC = () => {
           title="Delete virtual machine?"
           body={
             <>
-              This deletes <strong>{name}</strong> and its disk. What is on the disk is lost. Files
-              in a bucket stay.
+              This deletes <strong>{name}</strong>, its disk and its snapshots. What is on the disk
+              is lost. Files in a bucket stay.
             </>
           }
           confirmLabel="Delete"

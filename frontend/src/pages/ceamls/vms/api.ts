@@ -7,6 +7,7 @@ import {
   k8sCreateResource,
   k8sDeleteResource,
   k8sGetResource,
+  k8sListResourceItems,
   k8sPatchResource,
   k8sUpdateResource,
   useK8sWatchResource,
@@ -911,8 +912,31 @@ export const createVm = async (
   }
 };
 
-export const deleteVm = (ns: string, name: string): Promise<unknown> =>
-  k8sDeleteResource({ model: VirtualMachineModel, queryOptions: { name, ns } });
+/**
+ * Deletes the machine, then its snapshots: they are of no use without it
+ * and hold space. The keys Secret goes with the owner reference.
+ */
+export const deleteVm = async (ns: string, name: string): Promise<unknown> => {
+  const result = await k8sDeleteResource({
+    model: VirtualMachineModel,
+    queryOptions: { name, ns },
+  });
+  const all = await k8sListResourceItems<VirtualMachineSnapshotKind>({
+    model: VirtualMachineSnapshotModel,
+    queryOptions: { ns },
+  }).catch(() => []);
+  await Promise.all(
+    all
+      .filter((s) => s.spec.source.name === name)
+      .map((s) =>
+        k8sDeleteResource({
+          model: VirtualMachineSnapshotModel,
+          queryOptions: { name: s.metadata?.name ?? '', ns },
+        }).catch(() => undefined),
+      ),
+  );
+  return result;
+};
 
 export type VmAction = 'start' | 'stop' | 'restart';
 
