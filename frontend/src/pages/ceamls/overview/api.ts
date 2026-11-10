@@ -30,7 +30,8 @@ export type ProjectPage = {
   description: string;
   /** active, suspended or retired. */
   status: string;
-  pi: Person | null;
+  /** The PIs of the project: one or more, all with the same rights. */
+  pis: Person[];
   startDate: string | null;
   endDate: string | null;
   daysLeft: number | null;
@@ -72,10 +73,15 @@ export const searchCandidates = (
 ): Promise<{ people: Candidate[]; more: boolean }> =>
   jsonCall(`${url(ns)}/candidates?q=${encodeURIComponent(query)}`);
 
-export const changeMembers = (
-  ns: string,
-  change: { add?: string[]; remove?: string[] },
-): Promise<{ changed: string[] }> =>
+/** Email lists: new members, people who leave, new PIs, PIs who become members. */
+export type MemberChange = {
+  add?: string[];
+  remove?: string[];
+  makePi?: string[];
+  makeMember?: string[];
+};
+
+export const changeMembers = (ns: string, change: MemberChange): Promise<{ changed: string[] }> =>
   jsonCall(`${url(ns)}/members`, { method: 'POST', body: JSON.stringify(change) });
 
 export const requestAccess = (ns: string, body: NewRequest): Promise<AccessRequest> =>

@@ -58,6 +58,13 @@
   flex-shrink: 0;
 }
 
+.ceamls-person-acts {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0 var(--pf-t--global--spacer--md);
+}
+
 .ceamls-card-head {
   display: flex;
   align-items: center;

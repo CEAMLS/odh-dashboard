@@ -1,12 +1,13 @@
 // CEAMLS: the People block of the project Overview tab. Every member
-// reads the list. The PI and the admins also get Add Member, Remove and
-// the access requests; the API makes the same check.
+// reads the list. A project has one PI or more. The PIs and the admins
+// also get Add Member, Make PI, Make member, Remove and the access
+// requests; the API makes the same check.
 import * as React from 'react';
 import { Alert, Button, Card, CardBody, Content } from '@patternfly/react-core';
 import { ContentModal } from '@odh-dashboard/ui-core';
 import { toApiError } from '#~/pages/ceamls/buckets/api';
 import { cancelRequest, changeMembers } from './api';
-import type { AccessRequest, Person, ProjectPage } from './api';
+import type { AccessRequest, MemberChange, Person, ProjectPage } from './api';
 import AddMemberModal from './AddMemberModal';
 import CardHead from './CardHead';
 
@@ -31,18 +32,60 @@ const DotWord: React.FC<{ color: string; children: React.ReactNode }> = ({ color
   </span>
 );
 
-const RemoveModal: React.FC<{
+type Act = 'remove' | 'makePi' | 'makeMember';
+
+/** The words of the dialog that confirms each change. */
+const ACTS: Record<
+  Act,
+  {
+    title: (name: string) => string;
+    button: string;
+    failed: string;
+    danger: boolean;
+    text: string;
+    change: (email: string) => MemberChange;
+  }
+> = {
+  remove: {
+    title: (name) => `Remove ${name} from the project?`,
+    button: 'Remove',
+    failed: 'The person was not removed',
+    danger: true,
+    text: 'The person loses access to the project within a minute. The work the person started stays in the project. The account of the person stays too.',
+    change: (email) => ({ remove: [email] }),
+  },
+  makePi: {
+    title: (name) => `Make ${name} a PI of the project?`,
+    button: 'Make PI',
+    failed: 'The person was not made a PI',
+    danger: false,
+    text: 'A PI has the admin role on the project, adds and removes people, and gets the emails about the end date. Every PI of the project has the same rights.',
+    change: (email) => ({ makePi: [email] }),
+  },
+  makeMember: {
+    title: (name) => `Make ${name} a member of the project?`,
+    button: 'Make member',
+    failed: 'The person was not made a member',
+    danger: false,
+    text: 'The person keeps access to the project and its work, but can no longer add or remove people.',
+    change: (email) => ({ makeMember: [email] }),
+  },
+};
+
+const ActModal: React.FC<{
   ns: string;
+  act: Act;
   person: Person;
   onDone: () => void;
   onClose: () => void;
-}> = ({ ns, person, onDone, onClose }) => {
+}> = ({ ns, act, person, onDone, onClose }) => {
+  const words = ACTS[act];
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<Error>();
   const run = () => {
     setBusy(true);
     setError(undefined);
-    changeMembers(ns, { remove: [person.email] })
+    changeMembers(ns, words.change(person.email))
       .then(() => {
         onDone();
         onClose();
@@ -55,21 +98,21 @@ const RemoveModal: React.FC<{
   return (
     <ContentModal
       variant="small"
-      title={`Remove ${person.name} from the project?`}
+      title={words.title(person.name)}
       onClose={onClose}
-      dataTestId="ceamls-remove-member"
+      dataTestId={`ceamls-member-${act}`}
       error={error}
-      alertTitle="The person was not removed"
+      alertTitle={words.failed}
       buttonActions={[
-        { label: 'Remove', onClick: run, variant: 'danger', isLoading: busy },
+        {
+          label: words.button,
+          onClick: run,
+          variant: words.danger ? 'danger' : 'primary',
+          isLoading: busy,
+        },
         { label: 'Cancel', onClick: onClose, variant: 'link', isDisabled: busy },
       ]}
-      contents={
-        <Content component="p">
-          The person loses access to the project within a minute. The work the person started stays
-          in the project. The account of the person stays too.
-        </Content>
-      }
+      contents={<Content component="p">{words.text}</Content>}
     />
   );
 };
@@ -125,7 +168,18 @@ const PeopleCard: React.FC<{ ns: string; page: ProjectPage; reload: () => void }
   reload,
 }) => {
   const [adding, setAdding] = React.useState(false);
-  const [removing, setRemoving] = React.useState<Person>();
+  const [acting, setActing] = React.useState<{ act: Act; person: Person }>();
+  const piCount = page.people.filter((p) => p.role === 'pi').length;
+  const canChange = page.canManage && page.status !== 'retired';
+  // What a manager can do with a person. The last PI stays a PI.
+  const actsFor = (p: Person): Act[] =>
+    !canChange
+      ? []
+      : p.role === 'member'
+      ? ['makePi', 'remove']
+      : piCount > 1
+      ? ['makeMember']
+      : [];
   return (
     <Card isFullHeight data-testid="ceamls-overview-people">
       <CardHead title="People">
@@ -161,18 +215,21 @@ const PeopleCard: React.FC<{ ns: string; page: ProjectPage; reload: () => void }
             </div>
             <div>
               {p.role === 'pi' ? 'PI' : 'Member'}
-              {page.canManage && p.role === 'member' && (
-                <>
-                  <br />
-                  <Button
-                    variant="link"
-                    isInline
-                    onClick={() => setRemoving(p)}
-                    aria-label={`Remove ${p.name}`}
-                  >
-                    Remove
-                  </Button>
-                </>
+              {actsFor(p).length > 0 && (
+                <div className="ceamls-person-acts">
+                  {actsFor(p).map((act) => (
+                    <Button
+                      key={act}
+                      variant="link"
+                      isInline
+                      onClick={() => setActing({ act, person: p })}
+                      aria-label={`${ACTS[act].button}: ${p.name}`}
+                      data-testid={`ceamls-person-${act}`}
+                    >
+                      {ACTS[act].button}
+                    </Button>
+                  ))}
+                </div>
               )}
             </div>
           </div>
@@ -190,12 +247,13 @@ const PeopleCard: React.FC<{ ns: string; page: ProjectPage; reload: () => void }
           onClose={() => setAdding(false)}
         />
       )}
-      {removing && (
-        <RemoveModal
+      {acting && (
+        <ActModal
           ns={ns}
-          person={removing}
+          act={acting.act}
+          person={acting.person}
           onDone={reload}
-          onClose={() => setRemoving(undefined)}
+          onClose={() => setActing(undefined)}
         />
       )}
     </Card>

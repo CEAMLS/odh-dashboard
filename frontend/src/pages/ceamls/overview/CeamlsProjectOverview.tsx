@@ -1,6 +1,6 @@
 // CEAMLS: the project Overview tab. The stock tab showed cards for
 // workbenches, pipelines and models, which the tabs next to it show
-// already. This one shows what no other page shows: the PI and the
+// already. This one shows what no other page shows: the PIs and the
 // dates, the quota and what holds it, the usage over time, and the people.
 // The plan is planning/hub_pages.md section 3.7 in the cluster repo.
 import * as React from 'react';
@@ -46,8 +46,8 @@ const Banner: React.FC<{ page: ProjectPage }> = ({ page }) => {
   if (page.status === 'retired') {
     return (
       <Alert variant="danger" isInline title="The project is retired">
-        Nothing runs, and nobody can start work.{kept} To open the project again, the PI writes to
-        the CEAMLS team.
+        Nothing runs, and nobody can start work.{kept} To open the project again, a PI writes to the
+        CEAMLS team.
       </Alert>
     );
   }
@@ -62,8 +62,8 @@ const Banner: React.FC<{ page: ProjectPage }> = ({ page }) => {
             : 'The project is suspended'
         }
       >
-        Nothing runs, and nobody can start work.{kept} To open the project again, the PI writes to
-        the CEAMLS team.
+        Nothing runs, and nobody can start work.{kept} To open the project again, a PI writes to the
+        CEAMLS team.
       </Alert>
     );
   }
@@ -78,7 +78,7 @@ const Banner: React.FC<{ page: ProjectPage }> = ({ page }) => {
             : `The project ends on ${end}`
         }
       >
-        On that day access stops for every member. To keep the project, the PI asks the CEAMLS team
+        On that day access stops for every member. To keep the project, a PI asks the CEAMLS team
         for a new term.
       </Alert>
     );
@@ -92,20 +92,23 @@ const Facts: React.FC<{ page: ProjectPage }> = ({ page }) => (
   <Card data-testid="ceamls-overview-facts">
     <CardBody>
       <DescriptionList isAutoFit autoFitMinModifier={{ default: '200px' }} isCompact>
-        <Fact term="Principal investigator">
-          {page.pi ? (
-            <>
-              {page.pi.name}
-              {page.pi.name !== page.pi.email && (
+        <Fact term={page.pis.length > 1 ? 'Principal investigators' : 'Principal investigator'}>
+          {page.pis.length === 0 && 'Not set'}
+          {page.pis.map((pi, i) => (
+            <div
+              key={pi.email}
+              className={i ? 'pf-v6-u-mt-sm' : undefined}
+              data-testid="ceamls-overview-pi"
+            >
+              {pi.name}
+              {pi.name !== pi.email && (
                 <>
                   <br />
-                  <a href={`mailto:${page.pi.email}`}>{page.pi.email}</a>
+                  <a href={`mailto:${pi.email}`}>{pi.email}</a>
                 </>
               )}
-            </>
-          ) : (
-            'Not set'
-          )}
+            </div>
+          ))}
         </Fact>
         <Fact term="Started">{page.startDate ? dateText(page.startDate) : 'Not set'}</Fact>
         <Fact term="Ends">
