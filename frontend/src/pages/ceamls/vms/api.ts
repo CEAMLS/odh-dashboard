@@ -355,7 +355,7 @@ export const memoryBytesOf = (q: string): number => {
 };
 
 /** "5615m" as 5.615, "2" as 2. */
-const cpuCores = (q: string): number => {
+export const cpuCores = (q: string): number => {
   const m = /^(\d+(?:\.\d+)?)(m?)$/.exec(q.trim());
   if (!m) {
     return 0;

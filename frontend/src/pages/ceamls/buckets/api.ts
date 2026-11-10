@@ -87,7 +87,7 @@ const SESSION_ENDED = 'Your session ended. Reload the page to sign in again.';
 
 type CallInit = { method?: string; body?: string };
 
-const jsonCall = async <T>(url: string, init: CallInit = {}): Promise<T> => {
+export const jsonCall = async <T>(url: string, init: CallInit = {}): Promise<T> => {
   const headers: Record<string, string> = { 'X-Requested-With': 'fetch' };
   if (init.body !== undefined) {
     headers['Content-Type'] = 'application/json';
