@@ -223,17 +223,20 @@ const UseOverTimeCard: React.FC<{ ns: string }> = ({ ns }) => {
   return (
     <Card data-testid="ceamls-overview-use">
       <CardHead title="Usage Over Time">
-        <FormSelect
-          value={String(rangeIndex)}
-          onChange={(_e, v) => setRangeIndex(Number(v))}
-          aria-label="Range"
-          id="ceamls-use-range"
-          style={{ width: 'auto' }}
-        >
-          {RANGES.map((r, i) => (
-            <FormSelectOption key={r.label} value={String(i)} label={r.label} />
-          ))}
-        </FormSelect>
+        {/* The select fills its box, so the box is as wide as the text. */}
+        <div style={{ flex: '0 0 auto' }}>
+          <FormSelect
+            value={String(rangeIndex)}
+            onChange={(_e, v) => setRangeIndex(Number(v))}
+            aria-label="Range"
+            id="ceamls-use-range"
+            style={{ width: 'auto' }}
+          >
+            {RANGES.map((r, i) => (
+              <FormSelectOption key={r.label} value={String(i)} label={r.label} />
+            ))}
+          </FormSelect>
+        </div>
       </CardHead>
       <CardBody>
         <Grid hasGutter>
