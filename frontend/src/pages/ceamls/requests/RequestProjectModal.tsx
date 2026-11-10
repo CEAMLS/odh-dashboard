@@ -29,12 +29,12 @@ type Props = {
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const today = (): string => new Date().toISOString().slice(0, 10);
 
-const RESOURCES: { key: keyof NewProjectRequest['quota']; label: string; unit: string }[] = [
-  { key: 'gpu', label: 'GPU units', unit: 'units' },
-  { key: 'cpu', label: 'CPU cores', unit: 'cores' },
-  { key: 'memory', label: 'Memory', unit: 'GiB' },
-  { key: 'storage', label: 'Volume storage', unit: 'GiB' },
-  { key: 'objectStorage', label: 'Object storage', unit: 'GiB' },
+const RESOURCES: { key: keyof NewProjectRequest['quota']; label: string }[] = [
+  { key: 'gpu', label: 'GPU units' },
+  { key: 'cpu', label: 'CPU cores' },
+  { key: 'memory', label: 'Memory (GiB)' },
+  { key: 'storage', label: 'Volume storage (GiB)' },
+  { key: 'objectStorage', label: 'Object storage (GiB)' },
 ];
 
 const RequestProjectModal: React.FC<Props> = ({ me, onSent, onClose }) => {
@@ -248,9 +248,7 @@ const RequestProjectModal: React.FC<Props> = ({ me, onSent, onClose }) => {
                     onChange={setQuota(r.key)}
                     placeholder={defaults ? String(defaults[r.key]) : ''}
                   />
-                  <Content component="small">
-                    {r.label} ({r.unit})
-                  </Content>
+                  <Content component="small">{r.label}</Content>
                 </GridItem>
               ))}
             </Grid>
