@@ -57,3 +57,15 @@
   text-align: right;
   flex-shrink: 0;
 }
+
+.ceamls-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--pf-t--global--spacer--sm) var(--pf-t--global--spacer--md);
+}
+
+.ceamls-card-head > h2 {
+  margin: 0;
+}

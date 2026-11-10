@@ -52,6 +52,16 @@ const AddMemberModal: React.FC<Props> = ({ ns, title, onChanged, onClose }) => {
     reason: '',
   });
   const [busy, setBusy] = React.useState(false);
+  // The dialog takes the focus when it opens, so the search box asks for
+  // it a moment later.
+  const searchRef = React.useRef<HTMLInputElement>(null);
+  React.useEffect(() => {
+    if (step !== 'search') {
+      return undefined;
+    }
+    const id = setTimeout(() => searchRef.current?.focus(), 100);
+    return () => clearTimeout(id);
+  }, [step]);
 
   // The search runs a short time after the last key.
   const q = query.trim();
@@ -260,7 +270,7 @@ const AddMemberModal: React.FC<Props> = ({ ns, title, onChanged, onClose }) => {
             value={query}
             onChange={(_e, v) => setQuery(v)}
             onClear={() => setQuery('')}
-            autoFocus
+            ref={searchRef}
             data-testid="ceamls-member-search"
           />
           <div style={{ minHeight: 120 }} aria-live="polite" className="pf-v6-u-mt-md">

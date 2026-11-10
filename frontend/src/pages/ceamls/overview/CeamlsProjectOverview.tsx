@@ -1,7 +1,7 @@
 // CEAMLS: the project Overview tab. The stock tab showed cards for
 // workbenches, pipelines and models, which the tabs next to it show
 // already. This one shows what no other page shows: the PI and the
-// dates, the quota and what holds it, the use over time, and the people.
+// dates, the quota and what holds it, the usage over time, and the people.
 // The plan is planning/hub_pages.md section 3.7 in the cluster repo.
 import * as React from 'react';
 import {

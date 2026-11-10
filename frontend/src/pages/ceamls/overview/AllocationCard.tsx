@@ -20,6 +20,7 @@ type Props = {
 };
 
 const NONE = '—';
+const BOLD = { fontWeight: 700 };
 
 const AllocationCard: React.FC<Props> = ({ ns, loaded, rows, error, stopped }) => {
   // "Running for" moves with the clock.
@@ -84,13 +85,21 @@ const AllocationCard: React.FC<Props> = ({ ns, loaded, rows, error, stopped }) =
                   </Td>
                 </Tr>
               ))}
-              <Tr style={{ fontWeight: 600 }} data-testid="ceamls-allocation-total">
-                <Td dataLabel="Name">Total</Td>
+              <Tr data-testid="ceamls-allocation-total">
+                <Td dataLabel="Name" style={BOLD}>
+                  Total
+                </Td>
                 <Td />
                 <Td />
-                <Td dataLabel="GPU units">{countText(total.gpu)}</Td>
-                <Td dataLabel="CPU cores">{countText(total.cpu)}</Td>
-                <Td dataLabel="Memory">{gibText(total.memory)}</Td>
+                <Td dataLabel="GPU units" style={BOLD}>
+                  {countText(total.gpu)}
+                </Td>
+                <Td dataLabel="CPU cores" style={BOLD}>
+                  {countText(total.cpu)}
+                </Td>
+                <Td dataLabel="Memory" style={BOLD}>
+                  {gibText(total.memory)}
+                </Td>
                 <Td />
               </Tr>
             </Tbody>

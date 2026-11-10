@@ -2,20 +2,13 @@
 // reads the list. The PI and the admins also get Add Member, Remove and
 // the access requests; the API makes the same check.
 import * as React from 'react';
-import {
-  Alert,
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  CardTitle,
-  Content,
-} from '@patternfly/react-core';
+import { Alert, Button, Card, CardBody, Content } from '@patternfly/react-core';
 import { ContentModal } from '@odh-dashboard/ui-core';
 import { toApiError } from '#~/pages/ceamls/buckets/api';
 import { cancelRequest, changeMembers } from './api';
 import type { AccessRequest, Person, ProjectPage } from './api';
 import AddMemberModal from './AddMemberModal';
+import CardHead from './CardHead';
 
 const WARN = 'var(--pf-t--global--text--color--status--warning--default)';
 const DANGER = 'var(--pf-t--global--text--color--status--danger--default)';
@@ -135,27 +128,18 @@ const PeopleCard: React.FC<{ ns: string; page: ProjectPage; reload: () => void }
   const [removing, setRemoving] = React.useState<Person>();
   return (
     <Card isFullHeight data-testid="ceamls-overview-people">
-      <CardHeader
-        actions={
-          page.canManage
-            ? {
-                actions: (
-                  <Button
-                    variant="primary"
-                    onClick={() => setAdding(true)}
-                    isDisabled={page.status === 'retired'}
-                    data-testid="ceamls-add-member-button"
-                  >
-                    Add Member
-                  </Button>
-                ),
-                hasNoOffset: true,
-              }
-            : undefined
-        }
-      >
-        <CardTitle component="h2">People</CardTitle>
-      </CardHeader>
+      <CardHead title="People">
+        {page.canManage && (
+          <Button
+            variant="primary"
+            onClick={() => setAdding(true)}
+            isDisabled={page.status === 'retired'}
+            data-testid="ceamls-add-member-button"
+          >
+            Add Member
+          </Button>
+        )}
+      </CardHead>
       <CardBody>
         {!page.keycloak && (
           <Alert

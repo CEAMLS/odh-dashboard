@@ -1,4 +1,4 @@
-// CEAMLS: the Use over time block of the project Overview tab: how much
+// CEAMLS: the Usage Over Time block of the project Overview tab: how much
 // of the quota the project held over the last days. The numbers are the
 // "used" values of the project's ResourceQuota, which the cluster's
 // metrics keep for 30 days. They show what the project reserved, not
@@ -7,8 +7,6 @@ import * as React from 'react';
 import {
   Card,
   CardBody,
-  CardHeader,
-  CardTitle,
   Content,
   FormSelect,
   FormSelectOption,
@@ -28,6 +26,7 @@ import usePrometheusQueryRange, {
 import { SERIES_A, SERIES_B } from '#~/pages/ceamls/vms/UsageCard';
 import { countText, gibText, unitHours } from './logic';
 import type { Point } from './logic';
+import CardHead from './CardHead';
 
 type Range = { label: string; words: string; seconds: number; step: number };
 
@@ -223,26 +222,19 @@ const UseOverTimeCard: React.FC<{ ns: string }> = ({ ns }) => {
 
   return (
     <Card data-testid="ceamls-overview-use">
-      <CardHeader
-        actions={{
-          actions: (
-            <FormSelect
-              value={String(rangeIndex)}
-              onChange={(_e, v) => setRangeIndex(Number(v))}
-              aria-label="Range"
-              id="ceamls-use-range"
-              style={{ width: 'auto' }}
-            >
-              {RANGES.map((r, i) => (
-                <FormSelectOption key={r.label} value={String(i)} label={r.label} />
-              ))}
-            </FormSelect>
-          ),
-          hasNoOffset: true,
-        }}
-      >
-        <CardTitle component="h2">Use over time</CardTitle>
-      </CardHeader>
+      <CardHead title="Usage Over Time">
+        <FormSelect
+          value={String(rangeIndex)}
+          onChange={(_e, v) => setRangeIndex(Number(v))}
+          aria-label="Range"
+          id="ceamls-use-range"
+          style={{ width: 'auto' }}
+        >
+          {RANGES.map((r, i) => (
+            <FormSelectOption key={r.label} value={String(i)} label={r.label} />
+          ))}
+        </FormSelect>
+      </CardHead>
       <CardBody>
         <Grid hasGutter>
           <GridItem span={12}>
