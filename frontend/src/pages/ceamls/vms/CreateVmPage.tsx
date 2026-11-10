@@ -80,6 +80,7 @@ const CreateVmPage: React.FC = () => {
   const [customMemory, setCustomMemory] = React.useState<number | undefined>(8);
   const [disk, setDisk] = React.useState<number | undefined>(DISK_DEFAULT);
   const [env, setEnv] = React.useState(true);
+  const [gpus, setGpus] = React.useState<number | undefined>(0);
   const projectEnv = useProjectEnv(ns);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | undefined>(undefined);
@@ -131,9 +132,28 @@ const CreateVmPage: React.FC = () => {
       room.memoryTotal ?? 0,
     )}. Pick a smaller size, or stop a workbench or a machine.`;
   }
+  // The GPU field shows only in a project that was given GPUs for machines.
+  const gpuGrant = room.gpuTotal > 0;
+  const gpuCount = gpuGrant ? gpus ?? 0 : 0;
+  const gpuError =
+    gpuCount > room.gpuFree
+      ? room.gpuFree === 0
+        ? `The ${
+            room.gpuTotal === 1 ? 'GPU of the project is' : 'GPUs of the project are'
+          } in use. Stop the machine that holds ${
+            room.gpuTotal === 1 ? 'it' : 'one'
+          }, or make this machine without a GPU.`
+        : `The project has ${room.gpuFree} of ${room.gpuTotal} GPUs free.`
+      : undefined;
   // The form is complete when every part is present and valid.
   const complete = (): { image: ImageState; size: Size; disk: number } | undefined =>
-    !nameError && !diskError && !sizeError && image?.ready && size && disk !== undefined
+    !nameError &&
+    !diskError &&
+    !sizeError &&
+    !gpuError &&
+    image?.ready &&
+    size &&
+    disk !== undefined
       ? { image, size, disk }
       : undefined;
   const ready = !busy && complete() !== undefined;
@@ -155,7 +175,7 @@ const CreateVmPage: React.FC = () => {
     }
     setBusy(true);
     setError(undefined);
-    createVm(ns, { name, ...filled, password: makePassword(), env }, username)
+    createVm(ns, { name, ...filled, password: makePassword(), env, gpus: gpuCount }, username)
       .then(() => navigate(vmRoute(ns, name)))
       .catch((err: unknown) => {
         setError(errorMessage(err));
@@ -320,6 +340,31 @@ const CreateVmPage: React.FC = () => {
               </HelperText>
             </FormHelperText>
           </FormGroup>
+
+          {gpuGrant && (
+            <FormGroup label="GPUs" fieldId="ceamls-vm-gpus">
+              <NumberInputWrapper
+                id="ceamls-vm-gpus"
+                data-testid="ceamls-vm-gpus"
+                value={gpus}
+                min={0}
+                max={room.gpuTotal}
+                widthChars={2}
+                onChange={(v) => setGpus(v)}
+                inputAriaLabel="Number of GPUs"
+                minusBtnAriaLabel="One GPU less"
+                plusBtnAriaLabel="One GPU more"
+              />
+              <FormHelperText>
+                <HelperText>
+                  <HelperTextItem variant={gpuError ? 'error' : 'default'}>
+                    {gpuError ??
+                      `Whole NVIDIA H100 GPUs (94 GB each) that only this machine uses. The project has ${room.gpuFree} of ${room.gpuTotal} free. The machine holds its GPUs while it runs, so stop it when you finish. You install the NVIDIA driver in the machine yourself; the documentation has the commands.`}
+                  </HelperTextItem>
+                </HelperText>
+              </FormHelperText>
+            </FormGroup>
+          )}
 
           <FormGroup label="Project environment" fieldId="ceamls-vm-env">
             <Checkbox

@@ -379,7 +379,14 @@ export type Room = {
   cpuTotal?: number;
   memoryFree?: number;
   memoryTotal?: number;
+  /** Whole GPUs for machines: what the project was given, and what is free of it. */
+  gpuTotal: number;
+  gpuFree: number;
 };
+
+/** A whole GPU that a machine takes (PCI passthrough), and its key in the project quota. */
+export const VM_GPU = 'nvidia.com/vm-gpu';
+const VM_GPU_QUOTA_KEY = `requests.${VM_GPU}`;
 
 const DISK_QUOTA_KEY = /storageclass\.storage\.k8s\.io\/requests\.storage$/;
 
@@ -396,7 +403,7 @@ export const useRoom = (ns: string): Room => {
     ResourceQuotaModel,
   );
   return React.useMemo(() => {
-    const room: Room = { loaded };
+    const room: Room = { loaded, gpuTotal: 0, gpuFree: 0 };
     quotas.forEach((q) => {
       const hard = q.status?.hard ?? {};
       const used = q.status?.used ?? {};
@@ -414,6 +421,10 @@ export const useRoom = (ns: string): Room => {
           const total = memoryBytesOf(hard[key]);
           room.memoryTotal = total;
           room.memoryFree = Math.max(0, total - memoryBytesOf(used[key] ?? '0'));
+        } else if (key === VM_GPU_QUOTA_KEY) {
+          const total = Number(hard[key]) || 0;
+          room.gpuTotal = total;
+          room.gpuFree = Math.max(0, total - (Number(used[key] ?? '0') || 0));
         }
       });
     });
@@ -645,6 +656,9 @@ export type VmState = {
 /** The quota message of the cluster in the project's words. */
 export const plainProblem = (message: string): string => {
   if (/exceeded quota/.test(message)) {
+    if (/vm-gpu/.test(message)) {
+      return 'The project has no GPU free for this machine. Stop a machine that holds a GPU, or delete this one and make it without a GPU.';
+    }
     if (/requests\.storage/.test(message)) {
       return 'The project has no disk space left for this machine. Delete a volume or a machine you do not need, or ask for more space. The cluster tries again every few minutes.';
     }
@@ -788,6 +802,14 @@ export type NewVm = {
   password: string;
   /** Load the project environment at boot (envVolumes.ts). */
   env?: boolean;
+  /** Whole GPUs, in a project that was given GPUs for machines. */
+  gpus?: number;
+};
+
+/** The GPUs of a machine: one entry for each whole GPU. */
+export const vmGpus = (vm: VirtualMachineKind | undefined): number => {
+  const gpus = vm?.spec.template.spec.domain?.devices?.gpus;
+  return Array.isArray(gpus) ? gpus.length : 0;
 };
 
 /** The object the form writes (planning/vm_pages.md section 6). `owner` starts the SSH list. */
@@ -808,8 +830,12 @@ export const fixedMac = (): string => {
   return `02:ce:${Array.from(b, (x) => x.toString(16).padStart(2, '0')).join(':')}`;
 };
 
-const fixedMacDevices = () => ({
+const vmDevices = (gpus = 0) => ({
   interfaces: [{ name: 'default', masquerade: {}, macAddress: fixedMac() }],
+  // Each entry is one whole GPU of the node, handed to the guest.
+  ...(gpus > 0
+    ? { gpus: Array.from({ length: gpus }, (_x, n) => ({ name: `gpu${n}`, deviceName: VM_GPU })) }
+    : {}),
 });
 
 const bareVmObject = (ns: string, form: NewVm, owner: string): VirtualMachineKind => ({
@@ -844,11 +870,11 @@ const bareVmObject = (ns: string, form: NewVm, owner: string): VirtualMachineKin
       spec: {
         domain: isCustom(form.size)
           ? {
-              devices: fixedMacDevices(),
+              devices: vmDevices(form.gpus),
               cpu: { cores: form.size.cpu },
               memory: { guest: form.size.memory },
             }
-          : { devices: fixedMacDevices() },
+          : { devices: vmDevices(form.gpus) },
         networks: [{ name: 'default', pod: {} }],
         volumes: [
           { name: 'rootdisk', dataVolume: { name: form.name } },

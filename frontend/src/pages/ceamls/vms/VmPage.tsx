@@ -55,6 +55,7 @@ import {
   useVmi,
   vmAction,
   vmDisk,
+  vmGpus,
   vmImage,
   vmPassword,
   vmProblem,
@@ -394,6 +395,14 @@ const VmPage: React.FC = () => {
                           })()}
                         </DescriptionListDescription>
                       </DescriptionListGroup>
+                      {vmGpus(vm) > 0 && (
+                        <DescriptionListGroup>
+                          <DescriptionListTerm>GPUs</DescriptionListTerm>
+                          <DescriptionListDescription data-testid="ceamls-vm-gpus">
+                            {vmGpus(vm)}, held while the machine runs
+                          </DescriptionListDescription>
+                        </DescriptionListGroup>
+                      )}
                       <DescriptionListGroup>
                         <DescriptionListTerm>Project environment</DescriptionListTerm>
                         <DescriptionListDescription data-testid="ceamls-vm-env">
