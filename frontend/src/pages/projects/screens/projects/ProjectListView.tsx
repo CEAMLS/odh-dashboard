@@ -8,6 +8,7 @@ import { getProjectOwner, isAiProject } from '#~/concepts/projects/utils';
 import { ProjectsContext } from '#~/concepts/projects/ProjectsContext';
 import ProjectTableRow from '#~/pages/projects/screens/projects/ProjectTableRow';
 import ProjectsToolbar from '#~/pages/projects/screens/projects/ProjectsToolbar';
+import ProjectRequestsPanel from '#~/pages/ceamls/requests/ProjectRequestsPanel';
 import {
   aiProjectFilterKey,
   initialProjectsFilterData,
@@ -20,17 +21,13 @@ import ManageProjectModal from './ManageProjectModal';
 
 const PROJECT_FILTER_STORAGE_KEY = 'odh.dashboard.projects.type.filter';
 
-type ProjectListViewProps = {
-  allowCreate: boolean;
-};
-
 const getAiProjects = (projects: ProjectKind[]) => {
   return projects.filter((project) => {
     return isAiProject(project);
   });
 };
 
-const ProjectListView: React.FC<ProjectListViewProps> = ({ allowCreate }) => {
+const ProjectListView: React.FC = () => {
   const { projects } = React.useContext(ProjectsContext);
   const navigate = useNavigate();
   const [projectFilter, setProjectFilter] = useBrowserStorage<string>(
@@ -74,6 +71,7 @@ const ProjectListView: React.FC<ProjectListViewProps> = ({ allowCreate }) => {
 
   return (
     <>
+      <ProjectRequestsPanel />
       <Table
         enablePagination
         loading={false}
@@ -97,7 +95,6 @@ const ProjectListView: React.FC<ProjectListViewProps> = ({ allowCreate }) => {
           <ProjectsToolbar
             setProjectFilter={setProjectFilter}
             projectFilter={projectFilter}
-            allowCreate={allowCreate}
             filterData={filterData}
             onFilterUpdate={onFilterUpdate}
             aiProjectNum={aiProjectNum}

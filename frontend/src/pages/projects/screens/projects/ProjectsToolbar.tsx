@@ -14,9 +14,7 @@ import {
   Divider,
 } from '@patternfly/react-core';
 import { FilterIcon } from '@patternfly/react-icons';
-import { useNavigate } from 'react-router-dom';
 import FilterToolbar from '@odh-dashboard/ui-core/components/FilterToolbar';
-import { WhosMyAdministrator } from '@odh-dashboard/ui-core';
 import {
   aiProjectFilterKey,
   allProjectFilterKey,
@@ -24,11 +22,10 @@ import {
   projectsFilterOptions,
   ProjectsFilterOptions,
 } from '#~/pages/projects/screens/projects/const';
+import RequestProjectButton from '#~/pages/ceamls/requests/RequestProjectButton';
 import { AILabel } from './AILabel';
-import NewProjectButton from './NewProjectButton';
 
 type ProjectsToolbarProps = {
-  allowCreate: boolean;
   filterData: ProjectsFilterDataType;
   onFilterUpdate: (
     key: ProjectsFilterOptions,
@@ -41,7 +38,6 @@ type ProjectsToolbarProps = {
 };
 
 const ProjectsToolbar: React.FC<ProjectsToolbarProps> = ({
-  allowCreate,
   filterData,
   onFilterUpdate,
   aiProjectNum,
@@ -49,7 +45,6 @@ const ProjectsToolbar: React.FC<ProjectsToolbarProps> = ({
   projectFilter: currentProjectType,
   setProjectFilter,
 }) => {
-  const navigate = useNavigate();
   const [isProjectTypeDropdownOpen, setIsProjectTypeDropdownOpen] = React.useState(false);
   const isAISelected = currentProjectType === aiProjectFilterKey;
   const currentCount = isAISelected ? aiProjectNum : fullProjectNum;
@@ -161,18 +156,8 @@ const ProjectsToolbar: React.FC<ProjectsToolbarProps> = ({
       >
         <ToolbarGroup>
           <ToolbarItem>
-            {allowCreate ? (
-              <NewProjectButton
-                onProjectCreated={(projectName) => navigate(`/projects/${projectName}`)}
-              />
-            ) : (
-              <WhosMyAdministrator
-                buttonLabel="Need another project?"
-                headerContent="Need another project?"
-                leadText="To request a new project, contact your administrator."
-                contentTestId="projects-admin-help-content"
-              />
-            )}
+            {/* CEAMLS: every signed-in person asks for a project here (2026-11-10). */}
+            <RequestProjectButton />
           </ToolbarItem>
         </ToolbarGroup>
       </FilterToolbar>

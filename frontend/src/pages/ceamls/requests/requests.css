@@ -1,0 +1,32 @@
+/* CEAMLS: the list of the person's project requests on the Projects page.
+   PatternFly gives the colors and the type; these rules only place things. */
+.ceamls-requests {
+  margin-bottom: var(--pf-t--global--spacer--lg);
+}
+
+.ceamls-requests > .pf-v6-c-title {
+  margin-bottom: var(--pf-t--global--spacer--sm);
+}
+
+.ceamls-request {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--pf-t--global--spacer--md);
+  padding: var(--pf-t--global--spacer--sm) 0;
+  border-top: 1px solid var(--pf-t--global--border--color--default);
+}
+
+.ceamls-request-title {
+  font-weight: var(--pf-t--global--font--weight--body--bold);
+}
+
+.ceamls-request-title > small {
+  font-weight: var(--pf-t--global--font--weight--body--default);
+  margin-left: var(--pf-t--global--spacer--sm);
+}
+
+.ceamls-rp-resources .pf-v6-c-content--small {
+  display: block;
+  margin-top: var(--pf-t--global--spacer--xs);
+}

@@ -2,6 +2,8 @@ import React from 'react';
 import { act, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import EmptyProjects from '#~/pages/projects/screens/projects/EmptyProjects';
+import { ProjectRequestsProvider } from '#~/pages/ceamls/requests/ProjectRequestsContext';
+import { getMyRequests } from '#~/pages/ceamls/requests/api';
 import { useUser } from '#~/redux/selectors';
 
 jest.mock('#~/app/AppContext', () => ({
@@ -18,6 +20,10 @@ jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
   useNavigate: jest.fn(),
 }));
+jest.mock('#~/pages/ceamls/requests/api', () => ({
+  ...jest.requireActual('#~/pages/ceamls/requests/api'),
+  getMyRequests: jest.fn(),
+}));
 
 const useUserMock = jest.mocked(useUser);
 useUserMock.mockReturnValue({
@@ -29,27 +35,71 @@ useUserMock.mockReturnValue({
   userError: null,
 });
 
+const me = {
+  you: 'me@morgan.edu',
+  name: 'Me',
+  standing: 'ceamls-researchers',
+  defaults: { gpu: 0, cpu: 16, memory: 64, storage: 500, objectStorage: 0 },
+};
+
 describe('EmptyProjects', () => {
-  it('should show the create project button when allowed to create projects', async () => {
-    render(<EmptyProjects allowCreate />);
-    const createProject = await screen.findByTestId('create-project');
-    expect(createProject).toBeEnabled();
-    expect(createProject).not.toHaveAttribute('href');
-    const bodyText = await screen.findByTestId('projects-empty-body-text');
-    expect(bodyText).toHaveTextContent(
-      'Projects allow you and your team to organize and collaborate on resources within separate namespaces.',
+  // CEAMLS: every person asks for a project here; nobody creates one.
+  it('shows Request a project for everyone, and the dialog on click', async () => {
+    jest.mocked(getMyRequests).mockResolvedValue({ ...me, requests: [] });
+    render(
+      <ProjectRequestsProvider>
+        <EmptyProjects />
+      </ProjectRequestsProvider>,
     );
-    expect(bodyText).not.toHaveTextContent('To request a project, contact your administrator.');
+    const button = await screen.findByTestId('ceamls-request-project');
+    expect(button).toBeEnabled();
+    expect(screen.queryByTestId('create-project')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('ceamls-request')).not.toBeInTheDocument();
+    act(() => button.click());
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Request a project');
+    expect(screen.getByTestId('ceamls-request-send')).toBeDisabled();
   });
-  it('should show the who is my admin help when not allowed to create projects', async () => {
-    render(<EmptyProjects allowCreate={false} />);
-    const bodyText = await screen.findByTestId('projects-empty-body-text');
-    expect(bodyText).toHaveTextContent(
-      'Projects allow you and your team to organize and collaborate on resources within separate namespaces. To request a project, contact your administrator.',
+
+  it('lists the requests the person made, with the answer', async () => {
+    jest.mocked(getMyRequests).mockResolvedValue({
+      ...me,
+      requests: [
+        {
+          id: 'vision.0a1b2c3d',
+          name: 'vision',
+          title: 'Vision lab',
+          description: 'Images.',
+          pi: 'me@morgan.edu',
+          endDate: null,
+          quota: {},
+          time: '2026-11-10T10:00:00Z',
+          status: 'pending',
+        },
+        {
+          id: 'maps.0a1b2c3e',
+          name: 'maps',
+          title: 'Maps',
+          description: 'Maps.',
+          pi: 'me@morgan.edu',
+          endDate: null,
+          quota: {},
+          time: '2026-11-09T10:00:00Z',
+          status: 'denied',
+          denyReason: 'No GPU this term.',
+          deniedAt: '2026-11-10T09:00:00Z',
+        },
+      ],
+    });
+    render(
+      <ProjectRequestsProvider>
+        <EmptyProjects />
+      </ProjectRequestsProvider>,
     );
-    const adminHelpButton = await screen.findByTestId('projects-empty-admin-help');
-    act(() => adminHelpButton.click());
-    const helpContent = await screen.findByTestId('projects-empty-admin-help-content');
-    expect(helpContent).toBeVisible();
+    const rows = await screen.findAllByTestId('ceamls-request');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent('Waits for an admin. Asked 2026-11-10.');
+    expect(rows[1]).toHaveTextContent('Denied 2026-11-10: No GPU this term.');
+    expect(screen.getByRole('button', { name: 'Cancel the request Vision lab' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Remove the request Maps' })).toBeEnabled();
   });
 });

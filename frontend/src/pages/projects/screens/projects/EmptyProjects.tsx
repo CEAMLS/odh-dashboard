@@ -1,45 +1,31 @@
 import * as React from 'react';
 import { EmptyState, EmptyStateBody, EmptyStateFooter } from '@patternfly/react-core';
-import { useNavigate } from 'react-router-dom';
-import { WhosMyAdministrator } from '@odh-dashboard/ui-core';
 import projectsEmptyStateImg from '#~/images/empty-state-projects-color.svg';
-import NewProjectButton from './NewProjectButton';
+import ProjectRequestsPanel from '#~/pages/ceamls/requests/ProjectRequestsPanel';
+import RequestProjectButton from '#~/pages/ceamls/requests/RequestProjectButton';
 
-type EmptyProjectsProps = {
-  allowCreate: boolean;
-};
-
-const EmptyProjects: React.FC<EmptyProjectsProps> = ({ allowCreate }) => {
-  const navigate = useNavigate();
-
-  return (
+// CEAMLS: a person with no project asks for one here. The requests the
+// person made show under the empty state until an admin answers them.
+const EmptyProjects: React.FC = () => (
+  <>
     <EmptyState
       data-testid="no-project"
       headingLevel="h2"
       icon={() => <img style={{ height: 320 }} src={projectsEmptyStateImg} alt="no projects" />}
-      titleText={allowCreate ? 'Start by creating your project' : 'Start by requesting a project'}
+      titleText="Start by requesting a project"
       variant="lg"
     >
       <EmptyStateBody data-testid="projects-empty-body-text">
-        Projects allow you and your team to organize and collaborate on resources within separate
-        namespaces.{!allowCreate ? ' To request a project, contact your administrator.' : ''}
+        A project is your workspace on the cluster: its own limits, its own storage, and the people
+        who share it. Ask for one, and an admin creates it. A PI can also add you to a project that
+        exists.
       </EmptyStateBody>
       <EmptyStateFooter>
-        {allowCreate ? (
-          <>
-            <NewProjectButton
-              onProjectCreated={(projectName) => navigate(`/projects/${projectName}`)}
-            />
-          </>
-        ) : (
-          <WhosMyAdministrator
-            contentTestId="projects-empty-admin-help-content"
-            linkTestId="projects-empty-admin-help"
-          />
-        )}
+        <RequestProjectButton />
       </EmptyStateFooter>
     </EmptyState>
-  );
-};
+    <ProjectRequestsPanel />
+  </>
+);
 
 export default EmptyProjects;
