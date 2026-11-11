@@ -173,7 +173,7 @@ const RequestProjectModal: React.FC<Props> = ({ me, onSent, onClose }) => {
               </HelperText>
             </FormHelperText>
           </FormGroup>
-          <FormGroup label="What the project is for" isRequired fieldId="ceamls-rp-desc">
+          <FormGroup label="Project description" isRequired fieldId="ceamls-rp-desc">
             <TextArea
               id="ceamls-rp-desc"
               value={form.description}
@@ -186,7 +186,8 @@ const RequestProjectModal: React.FC<Props> = ({ me, onSent, onClose }) => {
             <FormHelperText>
               <HelperText>
                 <HelperTextItem>
-                  A few sentences: the research, who works on it, and what it needs.
+                  A few sentences: focus on the technical requirements and a brief description of
+                  the project.
                 </HelperTextItem>
               </HelperText>
             </FormHelperText>
