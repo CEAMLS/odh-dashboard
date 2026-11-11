@@ -31,7 +31,7 @@ import {
   VirtualMachineRestoreModel,
   VirtualMachineSnapshotModel,
 } from './models';
-import { withEnv } from './envVolumes';
+import { withEnv, withRunCommands } from './envVolumes';
 import type {
   DataSourceKind,
   DataVolumeKind,
@@ -79,7 +79,29 @@ export type Image = {
   note: string;
   /** Extra cloud-config lines for the first boot. */
   firstBoot?: string;
+  /**
+   * The commands that install the NVIDIA driver and the CUDA toolkit at the
+   * first boot of a machine with a GPU. Not there: the image is not tested
+   * with a GPU, and the person installs the driver.
+   */
+  gpuFirstBoot?: string[];
 };
+
+// The first boot of an Ubuntu machine with a GPU. The driver comes from
+// Ubuntu (the server branch, open kernel modules). The CUDA toolkit comes
+// from the NVIDIA repository, which the keyring package adds. The last
+// command loads the driver, so no restart is necessary. The toolkit
+// version goes with the driver branch: driver 580 runs CUDA 13.0 at most,
+// and a program from a newer toolkit fails at the kernel launch. Change the
+// two together. The text is short because KubeVirt caps inline cloud-init
+// at 2048 bytes. Tested live on 2026-11-10. The ceamls command
+// (`vm create`) carries the same lines; keep the two the same.
+export const UBUNTU_GPU_FIRST_BOOT = [
+  'wget -qO /tmp/k.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb && dpkg -i /tmp/k.deb && apt-get update',
+  'DEBIAN_FRONTEND=noninteractive apt-get install -y nvidia-headless-580-server-open nvidia-utils-580-server cuda-toolkit-13-0',
+  "echo 'export PATH=/usr/local/cuda/bin:$PATH' >/etc/profile.d/cuda.sh",
+  'nvidia-smi',
+];
 
 // The Ubuntu cloud image ships without the guest agent that tells the
 // cluster the OS is up (the others have it). Install it at the first boot.
@@ -106,6 +128,7 @@ export const IMAGES: Image[] = [
     user: 'ubuntu',
     note: 'Long-term support. apt.',
     firstBoot: UBUNTU_FIRST_BOOT,
+    gpuFirstBoot: UBUNTU_GPU_FIRST_BOOT,
   },
   {
     name: 'fedora',
@@ -881,9 +904,12 @@ const bareVmObject = (ns: string, form: NewVm, owner: string): VirtualMachineKin
           {
             name: 'cloudinitdisk',
             cloudInitNoCloud: {
-              userData: `#cloud-config\nuser: ${form.image.user}\npassword: ${
-                form.password
-              }\nchpasswd: { expire: False }\n${form.image.firstBoot ?? ''}`,
+              userData: withRunCommands(
+                `#cloud-config\nuser: ${form.image.user}\npassword: ${
+                  form.password
+                }\nchpasswd: { expire: False }\n${form.image.firstBoot ?? ''}`,
+                (form.gpus ?? 0) > 0 ? form.image.gpuFirstBoot ?? [] : [],
+              ),
             },
           },
         ],

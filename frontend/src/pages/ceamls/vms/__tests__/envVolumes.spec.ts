@@ -100,6 +100,29 @@ describe('newVmObject with env', () => {
   });
 });
 
+describe('newVmObject with a GPU', () => {
+  const form = { name: 'gpu-test', image: image('ubuntu'), size, disk: 30, password: 'pw' };
+  const userData = (vm: ReturnType<typeof newVmObject>): string =>
+    vm.spec.template.spec.volumes?.[1].cloudInitNoCloud?.userData ?? '';
+  it('installs the driver and the toolkit at the first boot, after the guest agent', () => {
+    expect(userData(newVmObject('ns', form, 'me@x'))).not.toContain('cuda-toolkit');
+    const out = userData(newVmObject('ns', { ...form, gpus: 1, env: true }, 'me@x'));
+    const doc = YAML.parse(out.replace(/^#cloud-config\n/, ''));
+    expect(doc.runcmd[0]).toEqual(['systemctl', 'enable', '--now', 'qemu-guest-agent']);
+    expect(doc.runcmd).toHaveLength(5);
+    expect(doc.runcmd[2]).toContain('nvidia-headless-580-server-open');
+    expect(doc.runcmd[2]).toContain('cuda-toolkit');
+    expect(doc.runcmd[4]).toBe('nvidia-smi');
+    expect(doc.mounts).toHaveLength(2);
+    // KubeVirt refuses inline cloud-init over 2048 bytes.
+    expect(out.length).toBeLessThan(2048);
+  });
+  it('adds nothing for an image without the commands', () => {
+    const out = userData(newVmObject('ns', { ...form, image: image('fedora'), gpus: 1 }, 'me@x'));
+    expect(out).not.toContain('nvidia');
+  });
+});
+
 const asList = (x: unknown): Record<string, unknown>[] =>
   Array.isArray(x)
     ? x.filter((i): i is Record<string, unknown> => typeof i === 'object' && i !== null)

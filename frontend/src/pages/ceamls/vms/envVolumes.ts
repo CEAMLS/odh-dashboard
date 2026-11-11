@@ -19,6 +19,27 @@ export const vmLoadsEnv = (vm: VirtualMachineKind): boolean =>
 const asList = (x: unknown): unknown[] => (Array.isArray(x) ? x : []);
 
 /**
+ * The cloud-config with commands added to `runcmd`, after the ones the
+ * image's first boot already has (the GPU setup). No commands: the text
+ * comes back as it is.
+ */
+export const withRunCommands = (userData: string, commands: string[]): string => {
+  if (commands.length === 0) {
+    return userData;
+  }
+  const body = userData.replace(/^#cloud-config[^\n]*\n?/, '');
+  const parsed: unknown = YAML.parse(body) ?? {};
+  const doc: Record<string, unknown> = {};
+  if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+    Object.entries(parsed).forEach(([k, v]) => {
+      doc[k] = v;
+    });
+  }
+  doc.runcmd = [...asList(doc.runcmd), ...commands];
+  return `#cloud-config\n${YAML.stringify(doc, { lineWidth: 0 })}`;
+};
+
+/**
  * The cloud-config with the mounts and the profile file added: the
  * `write_files` and `mounts` lists are merged with the ones the image's
  * first boot already has, never replaced. The input starts with
