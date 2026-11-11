@@ -15,6 +15,8 @@ import { useDefaultStorageClass } from '#~/pages/projects/screens/spawner/storag
 import { useCreateStorageObject } from '#~/pages/projects/screens/spawner/storage/utils';
 import { StorageData } from '#~/pages/projects/types';
 import { AccessMode } from '#~/pages/storageClasses/storageEnums';
+import useStorageClasses from '#~/concepts/k8s/useStorageClasses';
+import { sharedClassName } from '#~/pages/ceamls/storage/volumeKinds';
 import { StorageContextType } from './useStorageContextType';
 
 type CreateStorageObjectData = Pick<
@@ -54,6 +56,8 @@ const BaseStorageModal: React.FC<BaseStorageModalProps> = ({
   storageContextTypesLoaded,
 }) => {
   const [defaultStorageClass] = useDefaultStorageClass();
+  const [storageClasses] = useStorageClasses();
+  const sharedClass = sharedClassName(storageClasses);
   const [createData, setCreateData] = useCreateStorageObject(existingPvc, existingData);
   const [nameDescValid, setNameDescValid] = React.useState<boolean>();
   const [error, setError] = React.useState<Error | undefined>();
@@ -66,10 +70,14 @@ const BaseStorageModal: React.FC<BaseStorageModalProps> = ({
   }, [defaultStorageClass, existingPvc, setCreateData]);
 
   React.useEffect(() => {
+    // CEAMLS: the access mode follows the kind of the volume (Shared volume).
     if (!existingPvc && createData.storageClassName) {
-      setCreateData('accessMode', AccessMode.RWO);
+      setCreateData(
+        'accessMode',
+        createData.storageClassName === sharedClass ? AccessMode.RWX : AccessMode.RWO,
+      );
     }
-  }, [createData.storageClassName, setCreateData, existingPvc]);
+  }, [createData.storageClassName, setCreateData, existingPvc, sharedClass]);
 
   const canCreate = !actionInProgress && nameDescValid && isValid;
 

@@ -1,6 +1,7 @@
 export const s3Option = {
   key: 'S3',
-  label: 'S3 object storage',
+  // CEAMLS: 'compatible', because the bucket can be on any S3 service.
+  label: 'S3 compatible object storage',
 };
 export const ociOption = {
   key: 'OCI',

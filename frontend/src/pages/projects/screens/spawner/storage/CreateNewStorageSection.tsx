@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Alert, FormSection, HelperTextItem } from '@patternfly/react-core';
+import { FormSection, HelperTextItem } from '@patternfly/react-core';
 import { ExclamationCircleIcon } from '@patternfly/react-icons';
 import type { PersistentVolumeClaimKind } from '@odh-dashboard/k8s-core';
 import { SupportedArea, useIsAreaAvailable } from '@odh-dashboard/plugin-core/areas';
@@ -11,8 +11,10 @@ import type { UpdateObjectAtPropAndValue } from '@odh-dashboard/ui-core';
 import { StorageData } from '#~/pages/projects/types';
 import PVSizeField from '#~/pages/projects/components/PVSizeField';
 import { StorageContextType } from '#~/pages/projects/screens/detail/storage/useStorageContextType';
-import StorageClassSelect from './StorageClassSelect';
-import AccessModeField from './AccessModeField';
+import { AccessMode } from '#~/pages/storageClasses/storageEnums';
+import SharedVolumeField from '#~/pages/ceamls/storage/SharedVolumeField';
+import { isSharedAccessMode, sharedClassName } from '#~/pages/ceamls/storage/volumeKinds';
+import { useDefaultStorageClass } from './useDefaultStorageClass';
 import { useGetStorageClassConfig } from './useGetStorageClassConfig';
 import PVCContextField, { PVCContextFieldSkeleton } from './PVCContextField';
 
@@ -21,7 +23,6 @@ type CreateNewStorageSectionProps<D extends StorageData> = {
   setData: UpdateObjectAtPropAndValue<D>;
   currentStatus?: PersistentVolumeClaimKind['status'];
   autoFocusName?: boolean;
-  menuAppendTo?: HTMLElement | 'inline';
   disableStorageClassSelect?: boolean;
   onNameChange?: (value: string) => void;
   setValid?: (isValid: boolean) => void;
@@ -35,7 +36,6 @@ const CreateNewStorageSection = <D extends StorageData>({
   data,
   setData,
   currentStatus,
-  menuAppendTo,
   autoFocusName,
   disableStorageClassSelect,
   onNameChange,
@@ -57,12 +57,9 @@ const CreateNewStorageSection = <D extends StorageData>({
       editableK8sName,
     });
 
-  const {
-    storageClasses,
-    storageClassesLoaded,
-    selectedStorageClassConfig,
-    adminSupportedAccessModes,
-  } = useGetStorageClassConfig(data.storageClassName);
+  const { storageClasses } = useGetStorageClassConfig(data.storageClassName);
+  const [defaultStorageClass] = useDefaultStorageClass();
+  const sharedClass = sharedClassName(storageClasses);
 
   const [isValidModelPath, setIsValidModelPath] = React.useState(true);
   const removeModelAnnotations = () => {
@@ -103,30 +100,23 @@ const CreateNewStorageSection = <D extends StorageData>({
       />
       {isStorageClassesAvailable && (
         <>
-          <StorageClassSelect
-            storageClasses={storageClasses}
-            storageClassesLoaded={storageClassesLoaded}
-            selectedStorageClassConfig={selectedStorageClassConfig}
-            storageClassName={data.storageClassName}
-            setStorageClassName={(name) => setData('storageClassName', name)}
-            additionalHelperText={
-              <Alert
-                variant="info"
-                title="The storage class cannot be changed after creation."
-                isInline
-                isPlain
-              />
-            }
-            disableStorageClassSelect={disableStorageClassSelect}
-            menuAppendTo={menuAppendTo}
-          />
-          <AccessModeField
-            storageClassesLoaded={storageClassesLoaded}
-            adminSupportedAccessModes={adminSupportedAccessModes}
-            currentAccessMode={data.accessMode}
-            canEditAccessMode={editableK8sName}
-            setAccessMode={(accessMode) => setData('accessMode', accessMode)}
-          />
+          {/* CEAMLS: no storage class and no access mode. One choice: shared or not. */}
+          {(sharedClass || isSharedAccessMode(data.accessMode)) && (
+            <SharedVolumeField
+              isShared={isSharedAccessMode(data.accessMode)}
+              onChange={
+                disableStorageClassSelect || !sharedClass
+                  ? undefined
+                  : (shared) => {
+                      setData(
+                        'storageClassName',
+                        shared ? sharedClass : defaultStorageClass?.metadata.name,
+                      );
+                      setData('accessMode', shared ? AccessMode.RWX : AccessMode.RWO);
+                    }
+              }
+            />
+          )}
         </>
       )}
       {isContextTypeLoaded ? (

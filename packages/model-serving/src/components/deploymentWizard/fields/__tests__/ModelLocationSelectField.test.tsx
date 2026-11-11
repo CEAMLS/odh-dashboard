@@ -925,7 +925,7 @@ describe('ModelLocationSelectField', () => {
       await act(async () => {
         fireEvent.click(button);
       });
-      expect(screen.getByRole('option', { name: 'Cluster storage' })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'Volume' })).toBeInTheDocument();
     });
     it('should not show the cluster storage option if the project has no PVCs', async () => {
       mockPvcs.length = 0;
@@ -945,7 +945,7 @@ describe('ModelLocationSelectField', () => {
       await act(async () => {
         fireEvent.click(button);
       });
-      expect(screen.queryByRole('option', { name: 'Cluster storage' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('option', { name: 'Volume' })).not.toBeInTheDocument();
     });
     it('should show NVIDIA NIM option when NIM wizard area is enabled', async () => {
       mockUseIsAreaAvailable.mockReturnValue(mockAreaStatus(true));

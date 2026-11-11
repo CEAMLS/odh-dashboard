@@ -39,3 +39,9 @@ export const envRootPath = '/env';
 
 export const envRoute = (namespace?: string): string =>
   !namespace ? envRootPath : `${envRootPath}/${namespace}`;
+
+// Connections: the second page under Secrets and connections.
+export const connectionsRootPath = '/connections';
+
+export const connectionsRoute = (namespace?: string): string =>
+  !namespace ? connectionsRootPath : `${connectionsRootPath}/${namespace}`;

@@ -2,12 +2,13 @@ import type { NavExtension, RouteExtension } from '@odh-dashboard/plugin-core/ex
 import { SupportedArea } from '@odh-dashboard/plugin-core/areas';
 
 // CEAMLS: top-level, project-scoped pages (Workbenches, Virtual machines,
-// Storage > Volumes and Buckets) and the CEAMLS Chat item. Kept apart from navigation.ts/routes.ts
+// Storage > Volumes and Buckets, Secrets and connections) and the CEAMLS Chat item. Kept apart from navigation.ts/routes.ts
 // so a rebase onto upstream only has to carry the one group changed there
 // (Projects, which is also the landing page; there is no Home entry).
 // Top-level order, by group, on 3.6:
 //   1 Projects, 2 Workbenches, 2_x Virtual machines, 3 AI hub, 5 Develop & train,
-//   6 Observe & monitor, 6_x Storage (Volumes, Buckets), 6_y Secrets and variables,
+//   6 Observe & monitor, 6_x Storage (Volumes, Buckets),
+//   6_y Secrets and connections (Secrets and variables, Connections),
 //   7_x CEAMLS Chat (no Learning resources),
 //   8 Applications, 8 Settings
 // CEAMLS Chat is an outside address: NavItemHref renders it as a link that
@@ -82,6 +83,18 @@ const extensions: (NavExtension | RouteExtension)[] = [
     },
   },
   {
+    type: 'app.navigation/section',
+    flags: {
+      required: [SupportedArea.DS_PROJECTS_VIEW],
+    },
+    properties: {
+      id: 'ceamls-config',
+      title: 'Secrets and connections',
+      group: '6_y_env',
+      iconRef: () => import('#~/images/icons/EnvNavIcon'),
+    },
+  },
+  {
     type: 'app.navigation/href',
     flags: {
       required: [SupportedArea.DS_PROJECTS_VIEW],
@@ -91,8 +104,22 @@ const extensions: (NavExtension | RouteExtension)[] = [
       title: 'Secrets and variables',
       href: '/env',
       path: '/env/*',
-      group: '6_y_env',
-      iconRef: () => import('#~/images/icons/EnvNavIcon'),
+      section: 'ceamls-config',
+      group: '1_env',
+    },
+  },
+  {
+    type: 'app.navigation/href',
+    flags: {
+      required: [SupportedArea.DS_PROJECTS_VIEW],
+    },
+    properties: {
+      id: 'ceamls-connections',
+      title: 'Connections',
+      href: '/connections',
+      path: '/connections/*',
+      section: 'ceamls-config',
+      group: '2_connections',
     },
   },
   {
@@ -153,6 +180,16 @@ const extensions: (NavExtension | RouteExtension)[] = [
     properties: {
       path: '/env/*',
       component: () => import('#~/pages/ceamls/projectEnv/GlobalEnvRoutes'),
+    },
+  },
+  {
+    type: 'app.route',
+    flags: {
+      required: [SupportedArea.DS_PROJECTS_VIEW],
+    },
+    properties: {
+      path: '/connections/*',
+      component: () => import('#~/pages/ceamls/connections/GlobalConnectionsRoutes'),
     },
   },
   {

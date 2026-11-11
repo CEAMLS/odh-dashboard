@@ -35,7 +35,7 @@ import { AddVariableModal } from './AddVariableModal';
 
 export const envTitle = 'Secrets and variables';
 export const envDescription =
-  'The environment variables of the project. A secret hides its value; a variable shows it. Every workbench and VM that uses the project environment gets all of them at its next restart. Every member of the project can read every value.';
+  'The environment variables of the project. A secret hides its value; a variable shows it. Every workbench and VM that uses the project environment gets all of them at its next restart. Every member of the project can read every value. A set of values for one outside system that only some things use is a connection: see Connections.';
 
 const columns: SortableData<EnvVar>[] = [
   { field: 'name', label: 'Name', sortable: (a, b) => a.name.localeCompare(b.name) },

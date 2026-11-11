@@ -127,14 +127,14 @@ const getStatusSections = (
               return '--';
             }
             if (locationData.type === ModelLocationType.PVC) {
-              return 'Cluster storage';
+              return 'Volume';
             }
             const connectionType = locationData.connectionTypeObject;
             if (
               connectionType &&
               isModelServingCompatible(connectionType, ModelServingCompatibleTypes.S3ObjectStorage)
             ) {
-              return 'S3 object storage';
+              return 'S3 compatible object storage';
             }
             if (
               connectionType &&

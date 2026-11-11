@@ -15,9 +15,11 @@ import ConnectionsTable from './ConnectionsTable';
 import { ManageConnectionModal } from './ManageConnectionsModal';
 
 const ConnectionsDescription =
-  'Connections enable you to store and retrieve information that typically should not be stored in code. For example, you can store details (including credentials) for object storage, databases, and more. You can then attach the connections to artifacts in your project, such as workbenches and model servers.';
+  'A connection is a named set of values for one outside system, such as an S3 bucket. Attach it to the workbench, the model deployment or the pipeline server that uses it. The connection ceamls-s3 is for the object storage of the project.';
 
-const ConnectionsList: React.FC = () => {
+// CEAMLS: showTitle is false on the Connections page of the sidebar, which
+// has the title and the description in the page head.
+const ConnectionsList: React.FC<{ showTitle?: boolean }> = ({ showTitle = true }) => {
   const {
     connections: { data: connections, loaded, error, refresh: refreshConnections },
     currentProject,
@@ -38,16 +40,18 @@ const ConnectionsList: React.FC = () => {
   return (
     <>
       <DetailsSection
-        objectType={ProjectObjectType.connections}
+        objectType={showTitle ? ProjectObjectType.connections : undefined}
         id={ProjectSectionID.CONNECTIONS}
-        title={ProjectSectionTitles[ProjectSectionID.CONNECTIONS]}
+        title={(showTitle && ProjectSectionTitles[ProjectSectionID.CONNECTIONS]) || ''}
         popover={
-          <Popover headerContent="About connections" bodyContent={ConnectionsDescription}>
-            <DashboardPopupIconButton
-              icon={<OutlinedQuestionCircleIcon />}
-              aria-label="More info"
-            />
-          </Popover>
+          showTitle && (
+            <Popover headerContent="About connections" bodyContent={ConnectionsDescription}>
+              <DashboardPopupIconButton
+                icon={<OutlinedQuestionCircleIcon />}
+                aria-label="More info"
+              />
+            </Popover>
+          )
         }
         actions={[
           <>

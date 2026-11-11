@@ -1,7 +1,5 @@
 import { SortableData } from '@odh-dashboard/ui-core';
 import { getDisplayNameFromK8sResource, getPvcAccessMode } from '@odh-dashboard/k8s-core';
-import { getStorageClassConfig } from '#~/pages/storageClasses/utils';
-import { getAccessModePopover } from '#~/pages/projects/screens/spawner/storage/getAccessModePopover';
 import { StorageTableData } from './types';
 import { getContextStorageTypeExplanation, StorageContextType } from './useStorageContextType';
 
@@ -16,29 +14,16 @@ export const columns = (data: {
       getDisplayNameFromK8sResource(a.pvc).localeCompare(getDisplayNameFromK8sResource(b.pvc)),
   },
   {
-    field: 'storage',
-    label: 'Storage class',
-    width: 15,
-    sortable: (a, b) =>
-      (a.storageClass
-        ? getStorageClassConfig(a.storageClass)?.displayName ?? a.storageClass.metadata.name
-        : a.pvc.spec.storageClassName ?? ''
-      ).localeCompare(
-        b.storageClass
-          ? getStorageClassConfig(b.storageClass)?.displayName ?? b.storageClass.metadata.name
-          : b.pvc.spec.storageClassName ?? '',
-      ),
-  },
-  {
+    // CEAMLS: one column in place of Storage class and Access mode.
     field: 'accessMode',
-    label: 'Access mode',
-    width: 15,
+    label: 'Shared',
+    width: 10,
     sortable: (a, b) => getPvcAccessMode(a.pvc).localeCompare(getPvcAccessMode(b.pvc)),
     info: {
-      popover: getAccessModePopover({}),
+      popover:
+        'Many workbenches can use a shared volume at the same time. One workbench at a time uses a volume that is not shared.',
       popoverProps: {
         showClose: true,
-        maxWidth: '500px',
       },
     },
   },

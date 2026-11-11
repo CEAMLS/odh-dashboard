@@ -7,7 +7,7 @@ import { InfoCircleIcon } from '@patternfly/react-icons';
 import { Table } from '@odh-dashboard/ui-core';
 import { formatMemory } from '@odh-dashboard/ui-core/utilities/valueUnits';
 import { StorageData, StorageType } from '#~/pages/projects/types';
-import AccessModeFullName from '#~/pages/projects/screens/detail/storage/AccessModeFullName';
+import { sharedLabel } from '#~/pages/ceamls/storage/volumeKinds';
 import { clusterStorageTableColumns } from './constants';
 import { ClusterStorageDetachModal } from './ClusterStorageDetachModal';
 import WorkbenchStorageModal from './WorkbenchStorageModal';
@@ -118,9 +118,7 @@ export const ClusterStorageTable: React.FC<ClusterStorageTableProps> = ({
                   )}
               </Flex>
             </Td>
-            <Td dataLabel="Access mode">
-              <AccessModeFullName accessModeString={row.accessMode} />
-            </Td>
+            <Td dataLabel="Shared">{sharedLabel(row.accessMode)}</Td>
             <Td dataLabel="Storage size">Max {formatMemory(row.size)}</Td>
             <Td dataLabel="Mount path">{row.mountPath}</Td>
             <Td isActionCell>

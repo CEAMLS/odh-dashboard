@@ -1,7 +1,6 @@
 import { SortableData, kebabTableColumn } from '@odh-dashboard/ui-core';
 import { StorageData } from '#~/pages/projects/types';
 import { AccessMode } from '#~/pages/storageClasses/storageEnums';
-import { getAccessModePopover } from './getAccessModePopover';
 import { MOUNT_PATH_PREFIX } from './const';
 
 export const clusterStorageTableColumns: SortableData<StorageData>[] = [
@@ -17,17 +16,11 @@ export const clusterStorageTableColumns: SortableData<StorageData>[] = [
     sortable: false,
   },
   {
-    label: 'Access mode',
+    // CEAMLS: Shared in place of Access mode.
+    label: 'Shared',
     field: 'accessMode',
     sortable: false,
-    width: 30,
-    info: {
-      popover: getAccessModePopover({}),
-      popoverProps: {
-        showClose: true,
-        maxWidth: '500px',
-      },
-    },
+    width: 15,
   },
   {
     label: 'Storage size',

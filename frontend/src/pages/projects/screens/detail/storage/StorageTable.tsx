@@ -108,7 +108,6 @@ const StorageTable: React.FC<StorageTableProps> = ({
             obj={data}
             storageContextTypes={storageContextTypes}
             storageContextTypesLoaded={storageContextTypesLoaded}
-            storageClassesLoaded={storageClassesLoaded}
             showConnectedResources={showConnectedResources}
             additionalResourcesLoaded={connectedResourcesLoaded}
             getConnectedResourceLabels={getConnectedResourceLabels}

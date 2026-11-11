@@ -1,4 +1,5 @@
-// CEAMLS: the Secrets and variables page, one project at a time.
+// CEAMLS: the Secrets and variables page, one project at a time, under
+// Secrets and connections.
 // /env/<project> lists the project environment.
 import * as React from 'react';
 import { Navigate, Route } from 'react-router-dom';

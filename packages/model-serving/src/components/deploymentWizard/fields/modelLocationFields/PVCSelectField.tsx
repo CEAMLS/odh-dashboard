@@ -79,7 +79,7 @@ export const PvcSelectField: React.FC<PvcSelectProps> = ({
   const accessMode = selectedPVC ? getPvcAccessMode(selectedPVC) : undefined;
 
   return (
-    <FormGroup label="Cluster storage" isRequired>
+    <FormGroup label="Volume" isRequired>
       <Stack hasGutter>
         <StackItem>
           <TypeaheadSelect
@@ -98,18 +98,18 @@ export const PvcSelectField: React.FC<PvcSelectProps> = ({
         </StackItem>
         {selectedPVC && accessMode !== AccessMode.RWX && (
           <StackItem>
-            <Alert variant="warning" title="Storage access mode warning" isInline>
-              The access mode of the selected cluster storage is not <strong>ReadWriteMany</strong>.
-              This can prevent replicas from working as expected.
+            <Alert variant="warning" title="This volume is not a shared volume" isInline>
+              One pod at a time can use this volume. A deployment with more than one replica needs a
+              shared volume.
             </Alert>
           </StackItem>
         )}
         {showPVCError && !selectedPVC && (
           <StackItem>
-            <Alert variant="warning" title="Cannot access cluster storage" isInline>
-              The selected <strong>{pvcNameFromUri}</strong> cluster storage has been deleted or
-              cannot be reached. Before redeploying the model, select or create a different source
-              model location.
+            <Alert variant="warning" title="Cannot access the volume" isInline>
+              The selected <strong>{pvcNameFromUri}</strong> volume has been deleted or cannot be
+              reached. Before redeploying the model, select or create a different source model
+              location.
             </Alert>
           </StackItem>
         )}

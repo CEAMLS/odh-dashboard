@@ -174,7 +174,7 @@ export const ModelLocationSelectField: React.FC<ModelLocationSelectFieldProps> =
       ...(nonGeneratedConnections.length > 0
         ? [{ key: ModelLocationType.EXISTING, label: 'Existing connection' }]
         : []),
-      ...(pvcs.length > 0 ? [{ key: ModelLocationType.PVC, label: 'Cluster storage' }] : []),
+      ...(pvcs.length > 0 ? [{ key: ModelLocationType.PVC, label: 'Volume' }] : []),
     ];
 
     // Always include the base option of the selected connection type (URI, OCI, S3) for edit prefill scenarios

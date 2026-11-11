@@ -44,7 +44,6 @@ import useCheckLogoutParams from './useCheckLogoutParams';
 import ProjectOverview from './overview/ProjectOverview';
 import NotebookList from './notebooks/NotebookList';
 import StorageList from './storage/StorageList';
-import ConnectionsList from './connections/ConnectionsList';
 import PipelinesSection from './pipelines/PipelinesSection';
 import ProjectActions from './ProjectActions';
 
@@ -205,11 +204,8 @@ const ProjectDetails: React.FC = () => {
               title: 'Volumes', // CEAMLS: was 'Cluster storage'
               component: <StorageList />,
             },
-            {
-              id: ProjectSectionID.CONNECTIONS,
-              title: 'Connections',
-              component: <ConnectionsList />,
-            },
+            // CEAMLS: no Connections tab. The page is in the sidebar, under
+            // Secrets and connections.
             ...(roleManagementEnabled && allowRoles
               ? [
                   {
