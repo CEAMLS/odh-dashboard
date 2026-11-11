@@ -204,10 +204,6 @@ export const KeysTab: React.FC<{ ns: string }> = ({ ns }) => {
             </DescriptionListDescription>
           </DescriptionListGroup>
           <DescriptionListGroup>
-            <DescriptionListTerm>Object storage quota</DescriptionListTerm>
-            <DescriptionListDescription>{k.cap || '-'}</DescriptionListDescription>
-          </DescriptionListGroup>
-          <DescriptionListGroup>
             <DescriptionListTerm>In a workbench</DescriptionListTerm>
             <DescriptionListDescription>
               The connection &quot;Project S3 storage&quot; (Secret {k.connection} in the project)

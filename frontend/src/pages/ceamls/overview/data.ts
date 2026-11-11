@@ -1,20 +1,18 @@
 // CEAMLS: the data of the project Overview tab. The quota and the pods
 // come from the cluster as the signed-in person. The people and the
-// dates come from the project page API (api.ts). The object storage
-// numbers come from the storage API.
+// dates come from the project page API (api.ts).
 import * as React from 'react';
 import { groupVersionKind } from '#~/api/k8sUtils';
 import { PodModel } from '#~/api/models';
 import useK8sWatchResourceList from '#~/utilities/useK8sWatchResourceList';
-import { listBuckets, listProjects, toApiError } from '#~/pages/ceamls/buckets/api';
+import { toApiError } from '#~/pages/ceamls/buckets/api';
 import type { ApiError } from '#~/pages/ceamls/buckets/api';
-import { memoryBytesOf } from '#~/pages/ceamls/vms/api';
 import { ResourceQuotaModel } from '#~/pages/ceamls/vms/models';
 import type { ResourceQuotaKind } from '#~/pages/ceamls/vms/types';
 import { getProjectPage } from './api';
 import type { ProjectPage } from './api';
 import { quotaRows, workloads } from './logic';
-import type { ObjectStorage, PodLite, QuotaRow, Workload } from './logic';
+import type { PodLite, QuotaRow, Workload } from './logic';
 
 export type ProjectPageState = {
   loaded: boolean;
@@ -55,34 +53,6 @@ export const useProjectPage = (ns: string): ProjectPageState => {
   return { ...state, reload };
 };
 
-const useObjectStorage = (ns: string): ObjectStorage | undefined => {
-  const [value, setValue] = React.useState<ObjectStorage>();
-  React.useEffect(() => {
-    let live = true;
-    setValue(undefined);
-    listProjects()
-      .then(async ({ projects }) => {
-        const cap = projects.find((p) => p.name === ns)?.cap;
-        const capBytes = cap ? memoryBytesOf(cap) : 0;
-        if (!capBytes) {
-          return { known: true as const, capBytes: 0, usedBytes: 0 };
-        }
-        const { buckets } = await listBuckets(ns);
-        return {
-          known: true as const,
-          capBytes,
-          usedBytes: buckets.reduce((sum, b) => sum + (b.usage?.bytes ?? 0), 0),
-        };
-      })
-      .then((v) => live && setValue(v))
-      .catch(() => live && setValue({ known: false }));
-    return () => {
-      live = false;
-    };
-  }, [ns]);
-  return value;
-};
-
 export type QuotaState = { loaded: boolean; rows: QuotaRow[]; error?: Error };
 
 export const useQuotaRows = (ns: string): QuotaState => {
@@ -97,7 +67,6 @@ export const useQuotaRows = (ns: string): QuotaState => {
     ),
     ResourceQuotaModel,
   );
-  const object = useObjectStorage(ns);
   return React.useMemo(() => {
     const hard: Record<string, string> = {};
     const used: Record<string, string> = {};
@@ -106,11 +75,11 @@ export const useQuotaRows = (ns: string): QuotaState => {
       Object.assign(used, q.status?.used);
     });
     return {
-      loaded: loaded && object !== undefined,
-      rows: quotaRows(hard, used, object ?? { known: false }),
+      loaded,
+      rows: quotaRows(hard, used),
       error: error instanceof Error ? error : undefined,
     };
-  }, [quotas, loaded, error, object]);
+  }, [quotas, loaded, error]);
 };
 
 export const useWorkloads = (ns: string): { loaded: boolean; rows: Workload[]; error?: Error } => {

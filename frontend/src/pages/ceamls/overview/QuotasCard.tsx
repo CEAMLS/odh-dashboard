@@ -30,9 +30,6 @@ const RowText: React.FC<{ row: QuotaRow }> = ({ row }) => {
   if (row.state === 'none') {
     return <Content component="small">Not granted</Content>;
   }
-  if (row.state === 'unknown') {
-    return <Content component="small">The number is not available now</Content>;
-  }
   const note = NOTE[row.state];
   return (
     <span style={{ fontVariantNumeric: 'tabular-nums' }}>

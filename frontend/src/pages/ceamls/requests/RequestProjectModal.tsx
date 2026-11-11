@@ -33,8 +33,7 @@ const RESOURCES: { key: keyof NewProjectRequest['quota']; label: string }[] = [
   { key: 'gpu', label: 'GPU units' },
   { key: 'cpu', label: 'CPU cores' },
   { key: 'memory', label: 'Memory (GiB)' },
-  { key: 'storage', label: 'Volume storage (GiB)' },
-  { key: 'objectStorage', label: 'Object storage (GiB)' },
+  { key: 'storage', label: 'Storage (GiB)' },
 ];
 
 const RequestProjectModal: React.FC<Props> = ({ me, onSent, onClose }) => {
@@ -44,7 +43,7 @@ const RequestProjectModal: React.FC<Props> = ({ me, onSent, onClose }) => {
     description: '',
     pi: me?.you ?? '',
     endDate: '',
-    quota: { gpu: '', cpu: '', memory: '', storage: '', objectStorage: '' },
+    quota: { gpu: '', cpu: '', memory: '', storage: '' },
   });
   // The short name follows the title until the person edits it.
   const [nameEdited, setNameEdited] = React.useState(false);

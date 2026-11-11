@@ -6,16 +6,13 @@ import { cpuCores, memoryBytesOf } from '#~/pages/ceamls/vms/api';
 const GIB = 1024 ** 3;
 
 export const GPU_KEY = 'requests.nvidia.com/gpu';
-const SAFE_KEY = 'ceph-safe.storageclass.storage.k8s.io/requests.storage';
-const BULK_KEYS = [
-  'ceph-bulk.storageclass.storage.k8s.io/requests.storage',
-  'ceph-fs.storageclass.storage.k8s.io/requests.storage',
-];
+// One cap for all the volumes of the project, in every storage class.
+const STORAGE_KEY = 'requests.storage';
 
 /** The share of a quota from which the row says "Almost full". */
 export const ALMOST_FULL = 0.9;
 
-export type QuotaState = 'ok' | 'almost' | 'full' | 'none' | 'unknown';
+export type QuotaState = 'ok' | 'almost' | 'full' | 'none';
 
 export type QuotaRow = {
   key: string;
@@ -59,27 +56,16 @@ const row = (
   };
 };
 
-/** What is known about the project's object storage. */
-export type ObjectStorage = { known: false } | { known: true; capBytes: number; usedBytes: number };
-
 /**
  * The rows of the Quotas block, from the hard and used values of the
- * project's ResourceQuota. A project holds one cap for bulk storage on
- * two storage classes; the row shows the class that is nearer to its cap.
+ * project's ResourceQuota. Buckets have no row: no quota counts them.
  */
 export const quotaRows = (
   hard: Record<string, string>,
   used: Record<string, string>,
-  object: ObjectStorage,
 ): QuotaRow[] => {
   const bytes = (rec: Record<string, string>, key: string) => memoryBytesOf(rec[key] ?? '0');
-  const bulkKey = BULK_KEYS.reduce((best, k) =>
-    bytes(used, k) / (bytes(hard, k) || 1) > bytes(used, best) / (bytes(hard, best) || 1)
-      ? k
-      : best,
-  );
-  const bulkTotal = Math.max(...BULK_KEYS.map((k) => bytes(hard, k)));
-  const rows = [
+  return [
     row('gpu', 'GPU units', Number(used[GPU_KEY] ?? 0), Number(hard[GPU_KEY] ?? 0), ''),
     row(
       'cpu',
@@ -96,23 +82,8 @@ export const quotaRows = (
       'GiB',
       GIB,
     ),
-    row('storage', 'Volume storage', bytes(used, SAFE_KEY), bytes(hard, SAFE_KEY), 'GiB', GIB),
-    row('bulk', 'Bulk storage', bytes(used, bulkKey), bulkTotal, 'GiB', GIB),
+    row('storage', 'Storage', bytes(used, STORAGE_KEY), bytes(hard, STORAGE_KEY), 'GiB', GIB),
   ];
-  if (!object.known) {
-    rows.push({
-      key: 'object',
-      label: 'Object storage',
-      state: 'unknown',
-      percent: 0,
-      usedText: '',
-      totalText: '',
-      freeText: '',
-    });
-  } else {
-    rows.push(row('object', 'Object storage', object.usedBytes, object.capBytes, 'GiB', GIB));
-  }
-  return rows;
 };
 
 /** The parts of a Pod that the Resource Allocation table reads. */

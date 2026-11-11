@@ -15,7 +15,6 @@ export type RequestedQuota = {
   cpu?: number;
   memory?: number;
   storage?: number;
-  objectStorage?: number;
 };
 
 export type ProjectRequest = {

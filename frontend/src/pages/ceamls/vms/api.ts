@@ -411,7 +411,8 @@ export type Room = {
 export const VM_GPU = 'nvidia.com/vm-gpu';
 const VM_GPU_QUOTA_KEY = `requests.${VM_GPU}`;
 
-const DISK_QUOTA_KEY = /storageclass\.storage\.k8s\.io\/requests\.storage$/;
+// One cap for all the volumes of the project, in every storage class.
+const DISK_QUOTA_KEY = 'requests.storage';
 
 export const useRoom = (ns: string): Room => {
   const [quotas, loaded] = useK8sWatchResourceList<ResourceQuotaKind[]>(
@@ -431,7 +432,7 @@ export const useRoom = (ns: string): Room => {
       const hard = q.status?.hard ?? {};
       const used = q.status?.used ?? {};
       Object.keys(hard).forEach((key) => {
-        if (DISK_QUOTA_KEY.test(key) && key.startsWith(DISK_CLASS)) {
+        if (key === DISK_QUOTA_KEY) {
           const total = memoryBytesOf(hard[key]);
           room.diskTotal = total;
           room.diskFree = Math.max(0, total - memoryBytesOf(used[key] ?? '0'));

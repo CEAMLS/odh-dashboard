@@ -68,9 +68,9 @@ export const ApiErrorState: React.FC<{ error: ApiError; ns?: string }> = ({ erro
     return (
       <EmptyState headingLevel="h2" icon={CubesIcon} titleText="No object storage in this project">
         <EmptyStateBody>
-          Object storage is part of the project quota. A cluster admin raises the quota in CEAMLS
-          Cluster Admin. The project then gets an S3 user, a first bucket and the connection
-          &quot;Project S3 storage&quot; on the Connections tab.
+          Every project gets an S3 user, a first bucket and the connection &quot;Project S3
+          storage&quot;. For a new project this takes a minute or two. If it does not show after
+          that, ask a cluster admin.
         </EmptyStateBody>
       </EmptyState>
     );

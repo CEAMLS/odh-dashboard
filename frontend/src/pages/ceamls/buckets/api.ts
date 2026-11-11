@@ -15,8 +15,6 @@ export type Project = {
   bucket?: string;
   endpoint?: string;
   externalEndpoint: string;
-  cap?: string;
-  pipelines: boolean;
 };
 
 export type ProjectList = { projects: Project[]; externalEndpoint: string };
@@ -42,8 +40,6 @@ export type Keys = {
   externalEndpoint: string;
   bucket?: string;
   region: string;
-  cap?: string;
-  pipelines: boolean;
   connection: string;
 };
 

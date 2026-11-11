@@ -7,28 +7,22 @@ import {
 } from '#~/pages/ceamls/overview/logic';
 import type { PodLite } from '#~/pages/ceamls/overview/logic';
 
-const SAFE = 'ceph-safe.storageclass.storage.k8s.io/requests.storage';
-const BULK = 'ceph-bulk.storageclass.storage.k8s.io/requests.storage';
-const FS = 'ceph-fs.storageclass.storage.k8s.io/requests.storage';
+const STORAGE = 'requests.storage';
 
 describe('quotaRows', () => {
   const hard = {
     'requests.nvidia.com/gpu': '8',
     'requests.cpu': '16',
     'requests.memory': '128Gi',
-    [SAFE]: '200Gi',
-    [BULK]: '0',
-    [FS]: '0',
+    [STORAGE]: '200Gi',
   };
   const used = {
     'requests.nvidia.com/gpu': '8',
     'requests.cpu': '3615m',
     'requests.memory': '17126788800',
-    [SAFE]: '185Gi',
-    [BULK]: '0',
-    [FS]: '0',
+    [STORAGE]: '185Gi',
   };
-  const rows = quotaRows(hard, used, { known: false });
+  const rows = quotaRows(hard, used);
   const by = (key: string) => rows.find((r) => r.key === key);
 
   it('says full, almost full and free', () => {
@@ -38,30 +32,8 @@ describe('quotaRows', () => {
     expect(by('memory')).toMatchObject({ usedText: '16', totalText: '128 GiB' });
   });
 
-  it('says not granted and not available', () => {
-    expect(by('bulk')?.state).toBe('none');
-    expect(by('object')?.state).toBe('unknown');
-    const withObject = quotaRows(hard, used, {
-      known: true,
-      capBytes: 100 * 1024 ** 3,
-      usedBytes: 25 * 1024 ** 3,
-    });
-    expect(withObject.at(-1)).toMatchObject({ usedText: '25', totalText: '100 GiB', percent: 25 });
-    expect(quotaRows(hard, used, { known: true, capBytes: 0, usedBytes: 0 }).at(-1)?.state).toBe(
-      'none',
-    );
-  });
-
-  it('shows the bulk class that is nearer to its cap', () => {
-    const out = quotaRows(
-      { ...hard, [BULK]: '100Gi', [FS]: '100Gi' },
-      { ...used, [BULK]: '10Gi', [FS]: '60Gi' },
-      { known: false },
-    );
-    expect(out.find((r) => r.key === 'bulk')).toMatchObject({
-      usedText: '60',
-      totalText: '100 GiB',
-    });
+  it('has one storage row, and no row for buckets', () => {
+    expect(rows.map((r) => r.key)).toEqual(['gpu', 'cpu', 'memory', 'storage']);
   });
 });
 
