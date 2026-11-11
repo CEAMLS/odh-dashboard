@@ -359,7 +359,7 @@ const CreateVmPage: React.FC = () => {
                 <HelperText>
                   <HelperTextItem variant={gpuError ? 'error' : 'default'}>
                     {gpuError ??
-                      `Whole NVIDIA H100 GPUs (94 GB each) that only this machine uses. The project has ${room.gpuFree} of ${room.gpuTotal} free. The machine holds its GPUs while it runs, so stop it when you finish. On the Ubuntu image, the first boot installs the NVIDIA driver and the CUDA toolkit, which takes about 5 minutes. On the other images, you install the driver yourself.`}
+                      `Whole NVIDIA H100 GPUs (94 GB each) that only this machine uses. The project has ${room.gpuFree} of ${room.gpuTotal} free. The machine holds its GPUs while it runs, so stop it when you finish. On the Ubuntu image, the first boot installs the NVIDIA driver and the CUDA toolkit, which takes 5 to 12 minutes, longer on a small size. On the other images, you install the driver yourself.`}
                   </HelperTextItem>
                 </HelperText>
               </FormHelperText>
