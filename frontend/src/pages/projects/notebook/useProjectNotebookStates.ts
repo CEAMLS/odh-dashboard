@@ -6,8 +6,9 @@ import useFetch, {
   FetchStateCallbackPromiseAdHoc,
   NotReadyError,
 } from '@odh-dashboard/ui-core/hooks/useFetch';
-import { getNotebook, getNotebooks } from '#~/api';
+import { getNotebook, getNotebooks, groupVersionKind, NotebookModel } from '#~/api';
 import { NotebookKind } from '#~/k8sTypes';
+import useK8sWatchResourceList from '#~/utilities/useK8sWatchResourceList';
 import { NotebookDataState, NotebookState } from './types';
 import { getNotebooksStatus, getNotebookStatus } from './service';
 
@@ -65,6 +66,73 @@ export const getNotebooksStates = (
     return adhocUpdate;
   });
 
+/** How long to wait for more changes before one read (a start sends several). */
+const WATCH_REFRESH_DELAY = 300;
+
+/**
+ * CEAMLS: reads the list again when a workbench of the project changes.
+ *
+ * The list is read on a timer (POLL_INTERVAL, 30 s). Without this, a change
+ * that the cluster makes later than the click shows only at the next tick.
+ * The clearest case is a delete: the object stays until its finalizers
+ * finish, so the read right after the click still finds it.
+ *
+ * The watch only says WHEN to read. The read itself stays the same call as
+ * before, so the data has one source, and a watch that fails leaves the
+ * page as it was: on the timer.
+ */
+const useRefreshOnNotebookChange = (
+  namespace: string | undefined,
+  refresh: () => Promise<unknown>,
+): void => {
+  const watchResource = React.useMemo(
+    () =>
+      namespace
+        ? { isList: true, groupVersionKind: groupVersionKind(NotebookModel), namespace }
+        : null,
+    [namespace],
+  );
+  const [watched, watchLoaded] = useK8sWatchResourceList<NotebookKind[]>(
+    watchResource,
+    NotebookModel,
+  );
+  // One string per state of the list: a new, changed or removed workbench
+  // gives another string.
+  const version = React.useMemo(
+    () =>
+      watched
+        .map((n) => `${n.metadata.uid ?? n.metadata.name}:${n.metadata.resourceVersion ?? ''}`)
+        .toSorted()
+        .join(','),
+    [watched],
+  );
+  const seenVersion = React.useRef<string | null>(null);
+
+  // Another project: forget the list of the last one.
+  React.useEffect(() => {
+    seenVersion.current = null;
+  }, [namespace]);
+
+  React.useEffect(() => {
+    if (!watchLoaded) {
+      return undefined;
+    }
+    if (seenVersion.current === null) {
+      // The first answer of the watch. The list was read at the same time.
+      seenVersion.current = version;
+      return undefined;
+    }
+    if (seenVersion.current === version) {
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      seenVersion.current = version;
+      refresh();
+    }, WATCH_REFRESH_DELAY);
+    return () => clearTimeout(timer);
+  }, [version, watchLoaded, refresh]);
+};
+
 const useProjectNotebookStates = (
   namespace?: string,
   fetchOptions?: Partial<FetchOptions>,
@@ -85,7 +153,9 @@ const useProjectNotebookStates = (
     });
   }, [namespace]);
 
-  return useFetch<NotebookState[]>(fetchAllNotebooks, [], fetchOptions);
+  const state = useFetch<NotebookState[]>(fetchAllNotebooks, [], fetchOptions);
+  useRefreshOnNotebookChange(namespace, state.refresh);
+  return state;
 };
 
 export default useProjectNotebookStates;

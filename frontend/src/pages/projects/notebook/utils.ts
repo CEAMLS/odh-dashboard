@@ -23,6 +23,14 @@ export const hasStopAnnotation = (notebook: NotebookKind): boolean =>
     notebook.metadata.annotations['kubeflow-resource-stopped'] !== 'odh-notebook-controller-lock'
   );
 
+/**
+ * CEAMLS: the cluster marked the workbench for removal. The object stays
+ * until its finalizers finish (the route, the grant and the proxy of the
+ * workbench), which takes a few seconds.
+ */
+export const isNotebookDeleting = (notebook: NotebookKind): boolean =>
+  !!notebook.metadata.deletionTimestamp;
+
 export const getNotebookPVCVolumeNames = (notebook: NotebookKind): { [name: string]: string } =>
   (notebook.spec.template.spec.volumes || []).reduce((acc, volume) => {
     if (!volume.persistentVolumeClaim?.claimName) {

@@ -17,6 +17,8 @@ type NotebookStateStatusProps = {
   isStarting: boolean;
   isStopping: boolean;
   isRunning: boolean;
+  /** CEAMLS: the workbench is marked for removal and its cleanup runs. */
+  isDeleting?: boolean;
   notebookStatus?: NotebookStatus | null;
   kueueStatus?: KueueWorkloadStatusWithMessage | null;
   isCompact?: boolean;
@@ -34,6 +36,7 @@ const NotebookStatusLabel: React.FC<NotebookStateStatusProps> = ({
   isStarting,
   isStopping,
   isRunning,
+  isDeleting = false,
   notebookStatus,
   kueueStatus = null,
   isCompact,
@@ -42,6 +45,15 @@ const NotebookStatusLabel: React.FC<NotebookStateStatusProps> = ({
   const isError = notebookStatus?.currentStatus === EventStatus.ERROR;
 
   const labelSettings = React.useMemo<StatusLabelSettings>(() => {
+    // First: nothing else is true of a workbench that is going away.
+    if (isDeleting) {
+      return {
+        label: 'Deleting',
+        color: 'grey',
+        icon: <InProgressIcon className="ai-u-spin" />,
+      };
+    }
+
     if (isError) {
       return {
         label: 'Failed',
@@ -85,7 +97,7 @@ const NotebookStatusLabel: React.FC<NotebookStateStatusProps> = ({
       color: 'grey',
       icon: <OffIcon />,
     };
-  }, [kueueStatus, isError, isRunning, isStarting, isStopping]);
+  }, [kueueStatus, isDeleting, isError, isRunning, isStarting, isStopping]);
 
   return (
     <Label

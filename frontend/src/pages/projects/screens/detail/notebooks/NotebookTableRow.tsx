@@ -32,7 +32,7 @@ import NotebookStateStatus from '#~/pages/projects/notebook/NotebookStateStatus'
 import { NotebookActionsColumn } from '#~/pages/projects/notebook/NotebookActionsColumn';
 import { startNotebook, stopNotebook, getMlflowInstancePatch } from '#~/api';
 import { currentlyHasPipelines } from '#~/concepts/pipelines/elyra/utils';
-import { fireNotebookTrackingEvent } from '#~/pages/projects/notebook/utils';
+import { fireNotebookTrackingEvent, isNotebookDeleting } from '#~/pages/projects/notebook/utils';
 import useStopNotebookModalAvailability from '#~/pages/projects/notebook/useStopNotebookModalAvailability';
 import StopNotebookConfirmModal from '#~/pages/projects/notebook/StopNotebookConfirmModal';
 import HardwareProfileTableColumn from '#~/concepts/hardwareProfiles/HardwareProfileTableColumn';
@@ -91,6 +91,9 @@ const NotebookTableRow: React.FC<NotebookTableRowProps> = ({
   const [bindingStateInfo, bindingStateLoaded, bindingStateLoadError] =
     useHardwareProfileBindingState(obj.notebook, WORKBENCH_VISIBILITY);
   const showMigrationRequired = !isWorkbenchMigrated(obj.notebook);
+  // CEAMLS: marked for removal. The row stays until the cluster removes
+  // the object; until then it cannot be opened, started or stopped.
+  const isDeleting = isNotebookDeleting(obj.notebook);
 
   const isMlflowAvailable = useIsAreaAvailable(SupportedArea.MLFLOW).status;
   const isFeatureStoreAvailable = useIsAreaAvailable(SupportedArea.FEATURE_STORE).status;
@@ -223,7 +226,7 @@ const NotebookTableRow: React.FC<NotebookTableRowProps> = ({
                     <NotebookRouteLink
                       isLarge
                       notebook={obj.notebook}
-                      isRunning={obj.isRunning}
+                      isRunning={obj.isRunning && !isDeleting}
                       aria-label="open"
                       buttonStyle={{ textDecoration: 'none' }}
                     />
@@ -329,7 +332,7 @@ const NotebookTableRow: React.FC<NotebookTableRowProps> = ({
             currentState={obj}
             onStart={onStart}
             onStop={onStop}
-            isDisabled={inProgress}
+            isDisabled={inProgress || isDeleting}
           />
         </Td>
         <Td isActionCell>

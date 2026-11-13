@@ -8,6 +8,25 @@ const getStatusLabel = () => screen.getByTestId('notebook-status-text').textCont
 const getStatusLabelElement = () => screen.getByTestId('notebook-status-text');
 
 describe('NotebookStatusLabel', () => {
+  // CEAMLS: a workbench marked for removal.
+  it('should show Deleting first, even when the workbench is running or failed', () => {
+    render(
+      <NotebookStatusLabel
+        isStarting={false}
+        isStopping={false}
+        isRunning
+        isDeleting
+        notebookStatus={{
+          currentStatus: EventStatus.ERROR,
+          currentEvent: '',
+          currentEventReason: '',
+          currentEventDescription: '',
+        }}
+      />,
+    );
+    expect(getStatusLabel()).toBe('Deleting');
+  });
+
   it('should show Failed with danger status when notebook has error status', () => {
     render(
       <NotebookStatusLabel

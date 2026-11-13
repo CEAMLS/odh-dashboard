@@ -5,6 +5,7 @@ import type { ProjectKind } from '@odh-dashboard/k8s-core';
 import { NotebookKind } from '#~/k8sTypes';
 import { NotebookState } from '#~/pages/projects/notebook/types';
 import { WorkbenchPathsContext } from '#~/pages/ceamls/WorkbenchPathsContext';
+import { isNotebookDeleting } from './utils';
 
 type Props = {
   project: ProjectKind;
@@ -23,6 +24,8 @@ export const NotebookActionsColumn: React.FC<Props> = ({
   return (
     <ActionsColumn
       id="notebook-actions"
+      // CEAMLS: no edit and no second delete while the workbench goes away.
+      isDisabled={isNotebookDeleting(notebookState.notebook)}
       items={[
         {
           title: <span data-testid="edit-workbench-action">Edit workbench</span>,

@@ -33,6 +33,7 @@ import {
   WorkbenchTrackingEvent,
 } from '#~/concepts/kueue/workbenchTracking';
 import { NotebookState } from './types';
+import { isNotebookDeleting } from './utils';
 
 type NotebookStateStatusProps = {
   notebookState: NotebookState;
@@ -136,13 +137,18 @@ const NotebookStateStatus: React.FC<NotebookStateStatusProps> = ({
   const notebookStatus = useDeepCompareMemoize(unstableNotebookStatus);
   const isError = notebookStatus?.currentStatus === EventStatus.ERROR;
   const isStopped = !isError && !isRunning && !isStarting && !isStopping;
+  // CEAMLS: a workbench that is going away shows only "Deleting". The
+  // status dialog offers Start, Stop and Edit, and none of them applies.
+  const isDeleting = isNotebookDeleting(notebook);
   const [isStartModalOpen, setStartModalOpen] = React.useState(false);
-  const statusSubtitle = getStatusSubtitle({
-    isStarting,
-    isStopping,
-    notebookStatus,
-    kueueStatus,
-  });
+  const statusSubtitle = isDeleting
+    ? null
+    : getStatusSubtitle({
+        isStarting,
+        isStopping,
+        notebookStatus,
+        kueueStatus,
+      });
 
   const openStatusModal = React.useCallback(() => {
     const { isKueueBlocking } = getWorkbenchKueueTrackingProperties({
@@ -160,7 +166,7 @@ const NotebookStateStatus: React.FC<NotebookStateStatusProps> = ({
       <Flex
         direction={{ default: isVertical ? 'column' : 'row' }}
         gap={{ default: isVertical ? 'gapXs' : 'gapMd' }}
-        onClick={openStatusModal}
+        onClick={isDeleting ? undefined : openStatusModal}
       >
         <FlexItem>
           <NotebookStatusLabel
@@ -168,9 +174,10 @@ const NotebookStateStatus: React.FC<NotebookStateStatusProps> = ({
             isStarting={isStarting}
             isRunning={isRunning}
             isStopping={isStopping}
+            isDeleting={isDeleting}
             notebookStatus={notebookStatus}
             kueueStatus={kueueStatus}
-            onClick={openStatusModal}
+            onClick={isDeleting ? undefined : openStatusModal}
           />
         </FlexItem>
         {statusSubtitle != null ? (
@@ -187,7 +194,7 @@ const NotebookStateStatus: React.FC<NotebookStateStatusProps> = ({
           />
         ) : null}
       </Flex>
-      {isStartModalOpen ? (
+      {isStartModalOpen && !isDeleting ? (
         <StartNotebookModal
           notebook={notebook}
           isStarting={isStarting}
