@@ -34,6 +34,18 @@ export const vmRoute = (namespace: string, name: string): string =>
 export const vmConsoleRoute = (namespace: string, name: string): string =>
   `${vmRoute(namespace, name)}/console`;
 
+// System containers, a trial for administrators (planning/system_containers.md in the cluster repo).
+export const containersRootPath = '/system-containers';
+
+export const containersRoute = (namespace?: string): string =>
+  !namespace ? containersRootPath : `${containersRootPath}/${namespace}`;
+
+export const createContainerRoute = (namespace: string): string =>
+  `${containersRoute(namespace)}/create`;
+
+export const containerRoute = (namespace: string, name: string): string =>
+  `${containersRoute(namespace)}/${encodeURIComponent(name)}`;
+
 // Secrets and variables: the project environment (planning/hub_pages.md section 3.6).
 export const envRootPath = '/env';
 

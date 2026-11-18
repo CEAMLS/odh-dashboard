@@ -6,13 +6,17 @@ import { SupportedArea } from '@odh-dashboard/plugin-core/areas';
 // so a rebase onto upstream only has to carry the one group changed there
 // (Projects, which is also the landing page; there is no Home entry).
 // Top-level order, by group, on 3.6:
-//   1 Projects, 2 Workbenches, 2_x Virtual machines, 3 AI hub, 5 Develop & train,
+//   1 Projects, 2 Workbenches, 2_x Virtual machines, 2_y System containers (administrators), 3 AI hub, 5 Develop & train,
 //   6 Observe & monitor, 6_x Storage (Volumes, Buckets),
 //   6_y Secrets and connections (Secrets and variables, Connections),
 //   7_x CEAMLS Chat (no Learning resources),
 //   8 Applications, 8 Settings
 // CEAMLS Chat is an outside address: NavItemHref renders it as a link that
 // opens a new tab. Plan: planning/hub_pages.md in the cluster repo.
+// System containers are a trial: the item and the route exist for
+// administrators only (planning/system_containers.md in the cluster repo).
+const ADMIN_USER = 'ADMIN_USER';
+
 const extensions: (NavExtension | RouteExtension)[] = [
   {
     type: 'app.navigation/href',
@@ -40,6 +44,20 @@ const extensions: (NavExtension | RouteExtension)[] = [
       path: '/vms/*',
       group: '2_x_vms',
       iconRef: () => import('#~/images/icons/VirtualMachinesNavIcon'),
+    },
+  },
+  {
+    type: 'app.navigation/href',
+    flags: {
+      required: [SupportedArea.DS_PROJECTS_VIEW, ADMIN_USER],
+    },
+    properties: {
+      id: 'ceamls-system-containers',
+      title: 'System containers',
+      href: '/system-containers',
+      path: '/system-containers/*',
+      group: '2_y_system_containers',
+      iconRef: () => import('#~/images/icons/SystemContainersNavIcon'),
     },
   },
   {
@@ -150,6 +168,16 @@ const extensions: (NavExtension | RouteExtension)[] = [
     properties: {
       path: '/vms/*',
       component: () => import('#~/pages/ceamls/vms/GlobalVmsRoutes'),
+    },
+  },
+  {
+    type: 'app.route',
+    flags: {
+      required: [SupportedArea.DS_PROJECTS_VIEW, ADMIN_USER],
+    },
+    properties: {
+      path: '/system-containers/*',
+      component: () => import('#~/pages/ceamls/containers/GlobalContainersRoutes'),
     },
   },
   {
