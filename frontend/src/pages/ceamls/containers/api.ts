@@ -73,6 +73,8 @@ const IMAGE_LABEL = 'ceamls.morgan.edu/image';
 const SERVICE_ACCOUNT = 'ceamls-system-container';
 const SCC = 'ceamls-system-container';
 const SCC_ROLE = 'ceamls-system-container-scc';
+/** crun 1.31 on the nodes (gitops/machineconfig in the cluster repo). */
+const RUNTIME_CLASS = 'ceamls-userns';
 const DISK_CLASS = 'ceph-safe';
 /** A share of a GPU, the unit a workbench takes too (four shares on each card). */
 export const GPU = 'nvidia.com/gpu';
@@ -343,6 +345,11 @@ export const newDeployment = (ns: string, form: NewContainer, owner: string): De
           serviceAccountName: SERVICE_ACCOUNT,
           automountServiceAccountToken: false,
           hostname: form.name,
+          // A user namespace: root in the machine is an ordinary user on
+          // the node. The stock crun of the nodes crashes when a container
+          // with a GPU joins one, so the pod asks for the fixed crun.
+          hostUsers: false,
+          runtimeClassName: RUNTIME_CLASS,
           terminationGracePeriodSeconds: 30,
           // The SELinux type comes from the constraint. A type written here
           // without a level is refused.

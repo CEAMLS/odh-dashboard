@@ -19,6 +19,8 @@ export type PodSpec = {
   serviceAccountName?: string;
   automountServiceAccountToken?: boolean;
   hostname?: string;
+  hostUsers?: boolean;
+  runtimeClassName?: string;
   terminationGracePeriodSeconds?: number;
   nodeName?: string;
   securityContext?: Record<string, unknown>;
