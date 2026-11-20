@@ -299,14 +299,22 @@ export type NewContainer = {
   gpus: number;
 };
 
-/** The first start copies these directories to the disk; the machine runs from the copies. */
-const SYSTEM_DIRS = ['usr', 'etc', 'var', 'home', 'root', 'opt', 'srv'];
+/**
+ * The directories that live on the machine's disk. The first start copies
+ * each one from the image. A pod cannot have a volume as its root directory,
+ * so a directory that a person makes directly under / is not on the disk;
+ * /data is there for that, and the image warns at login about any other.
+ */
+const SYSTEM_DIRS = ['usr', 'etc', 'var', 'home', 'root', 'opt', 'srv', 'mnt', 'media', 'data'];
 
+// A directory is copied when the disk does not have it yet, so a directory
+// added to the list later reaches an older disk too. Without the marker the
+// first copy did not finish, and every directory is copied again.
 const SEED_SCRIPT = `set -e
-if [ -e /disk/.ceamls-seeded ]; then exit 0; fi
 for d in ${SYSTEM_DIRS.join(' ')}; do
+  if [ -e /disk/.ceamls-seeded ] && [ -e "/disk/$d" ]; then continue; fi
   rm -rf "/disk/$d"
-  cp -a "/$d" /disk/
+  if [ -d "/$d" ]; then cp -a "/$d" /disk/; else mkdir "/disk/$d"; fi
 done
 touch /disk/.ceamls-seeded
 `;
